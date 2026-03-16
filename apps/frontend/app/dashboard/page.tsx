@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Plan, UserSession } from "@/lib/types";
+import type { CatalogItem, Plan, UserSession } from "@/lib/types";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [status, setStatus] = useState("Loading...");
   const [following, setFollowing] = useState<{ userId: string; fullName: string; email: string }[]>([]);
   const [referrals, setReferrals] = useState<{ total: number; referees: { userId: string; fullName: string; email: string }[] } | null>(null);
+  const [continueWatching, setContinueWatching] = useState<CatalogItem[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -45,10 +46,34 @@ export default function DashboardPage() {
       const plansPayload = await planRes.json();
       const followingPayload = followingRes.ok ? await followingRes.json() : { data: [] };
       const referralsPayload = referralsRes.ok ? await referralsRes.json() : { data: null };
+      let continueWatchingItems: CatalogItem[] = [];
+      try {
+        const userId = mePayload.data.userId as string;
+        const analyticsRes = await fetch(
+          `${apiBaseUrl}/api/analytics/continue-watching?userId=${encodeURIComponent(userId)}`
+        );
+        if (analyticsRes.ok) {
+          const analyticsPayload = await analyticsRes.json();
+          const ids: string[] = analyticsPayload.data.map(
+            (entry: { contentId: string; lastPlayedAt: string }) => entry.contentId
+          );
+          if (ids.length > 0) {
+            const bulkResponse = await fetch(
+              `${apiBaseUrl}/api/content/bulk?ids=${encodeURIComponent(ids.join(","))}`
+            );
+            if (bulkResponse.ok) {
+              const bulkPayload = await bulkResponse.json();
+              continueWatchingItems = bulkPayload.data as CatalogItem[];
+            }
+          }
+        }
+      } catch {
+      }
       setSession(mePayload.data);
       setPlans(plansPayload.data);
       setFollowing(followingPayload.data);
       setReferrals(referralsPayload.data);
+      setContinueWatching(continueWatchingItems);
       setStatus("Ready");
     }
     loadData().catch(() => setStatus("Unable to load dashboard"));
@@ -127,6 +152,34 @@ export default function DashboardPage() {
               ))}
             </ul>
           )}
+        </section>
+      ) : null}
+      {session && continueWatching.length > 0 ? (
+        <section className="rounded-xl border border-gray-800 p-5">
+          <h2 className="text-xl font-semibold">Continue Watching</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
+            {continueWatching.map((item) => (
+              <a
+                className="group overflow-hidden rounded-md border border-gray-800 bg-gray-900"
+                href={`/title/${item.id}`}
+                key={item.id}
+              >
+                <div className="aspect-[2/3] bg-gray-800">
+                  {item.posterImageUrl ? (
+                    <img
+                      alt={item.title}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      src={item.posterImageUrl}
+                    />
+                  ) : null}
+                </div>
+                <div className="p-3">
+                  <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+                </div>
+              </a>
+            ))}
+          </div>
         </section>
       ) : null}
       <section className="rounded-xl border border-gray-800 p-5">

@@ -91,4 +91,43 @@ router.get("/trending", async (request, response) => {
   });
 });
 
+router.get("/continue-watching", async (request, response) => {
+  const userId = String(request.query.userId ?? "");
+  if (!userId) {
+    response.json({ data: [] });
+    return;
+  }
+
+  const results = await EventModel.aggregate([
+    {
+      $match: {
+        userId,
+        contentId: { $exists: true, $ne: null },
+        kind: { $in: ["play", "complete"] }
+      }
+    },
+    {
+      $group: {
+        _id: "$contentId",
+        lastPlayedAt: { $max: "$createdAt" }
+      }
+    },
+    {
+      $sort: {
+        lastPlayedAt: -1
+      }
+    },
+    {
+      $limit: 10
+    }
+  ]);
+
+  response.json({
+    data: results.map((entry) => ({
+      contentId: entry._id as string,
+      lastPlayedAt: entry.lastPlayedAt as Date
+    }))
+  });
+});
+
 export const analyticsRoutes = router;

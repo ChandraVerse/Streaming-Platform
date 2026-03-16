@@ -31,6 +31,34 @@ async function fetchRecommendations(id: string): Promise<CatalogItem[]> {
   return payload.data as CatalogItem[];
 }
 
+async function getUserIdForAnalytics(): Promise<string | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const stored = window.localStorage.getItem("userId");
+  if (stored) {
+    return stored;
+  }
+  const token = window.localStorage.getItem("accessToken");
+  if (!token) {
+    return null;
+  }
+  const meResponse = await fetch(`${apiBaseUrl}/api/users/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!meResponse.ok) {
+    return null;
+  }
+  const mePayload = await meResponse.json();
+  const userId = mePayload.data?.userId ?? null;
+  if (userId) {
+    window.localStorage.setItem("userId", userId);
+  }
+  return userId;
+}
+
 export default async function TitlePage(props: Props) {
   const params = await props.params;
   const [content, recommendations] = await Promise.all([fetchContent(params.id), fetchRecommendations(params.id)]);
@@ -47,6 +75,18 @@ export default async function TitlePage(props: Props) {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10">
       <h1 className="text-3xl font-bold">{content.title}</h1>
       <p className="text-sm text-gray-300">{content.description}</p>
+      <div className="mt-2 flex flex-wrap gap-2 text-sm">
+        <a
+          className="rounded-md bg-green-600 px-3 py-1 font-medium hover:bg-green-500"
+          href={`https://wa.me/?text=${encodeURIComponent(
+            `Check this title on Unified OTT: ${content.title} - /title/${content.id}`
+          )}`}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Share on WhatsApp
+        </a>
+      </div>
       {content.muxPlaybackId ? (
         <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg bg-black">
           <video
@@ -55,13 +95,32 @@ export default async function TitlePage(props: Props) {
             src={`https://stream.mux.com/${content.muxPlaybackId}.m3u8`}
             onPlay={async () => {
               try {
+                const userId = await getUserIdForAnalytics();
                 await fetch(`${apiBaseUrl}/api/analytics/events`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json"
                   },
                   body: JSON.stringify({
+                    userId: userId || undefined,
                     kind: "play",
+                    contentId: content.id
+                  })
+                });
+              } catch {
+              }
+            }}
+            onEnded={async () => {
+              try {
+                const userId = await getUserIdForAnalytics();
+                await fetch(`${apiBaseUrl}/api/analytics/events`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    userId: userId || undefined,
+                    kind: "complete",
                     contentId: content.id
                   })
                 });
