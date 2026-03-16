@@ -110,9 +110,30 @@ export default async function TitlePage(props: Props) {
               } catch {
               }
             }}
-            onEnded={async () => {
+            onPause={async (event) => {
               try {
                 const userId = await getUserIdForAnalytics();
+                const element = event.currentTarget;
+                await fetch(`${apiBaseUrl}/api/analytics/events`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    userId: userId || undefined,
+                    kind: "pause",
+                    contentId: content.id,
+                    positionSeconds: Math.floor(element.currentTime),
+                    durationSeconds: Number.isFinite(element.duration) ? Math.floor(element.duration) : undefined
+                  })
+                });
+              } catch {
+              }
+            }}
+            onEnded={async (event) => {
+              try {
+                const userId = await getUserIdForAnalytics();
+                const element = event.currentTarget;
                 await fetch(`${apiBaseUrl}/api/analytics/events`, {
                   method: "POST",
                   headers: {
@@ -121,7 +142,9 @@ export default async function TitlePage(props: Props) {
                   body: JSON.stringify({
                     userId: userId || undefined,
                     kind: "complete",
-                    contentId: content.id
+                    contentId: content.id,
+                    positionSeconds: Math.floor(element.currentTime),
+                    durationSeconds: Number.isFinite(element.duration) ? Math.floor(element.duration) : undefined
                   })
                 });
               } catch {

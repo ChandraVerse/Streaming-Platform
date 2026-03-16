@@ -10,6 +10,8 @@ type Props = {
 };
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
 
 export default function SubscribePage(props: Props) {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -17,6 +19,8 @@ export default function SubscribePage(props: Props) {
   const [referralCode, setReferralCode] = useState("");
   const [message, setMessage] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [isProcessingStripe, setIsProcessingStripe] = useState(false);
+  const [isProcessingRazorpay, setIsProcessingRazorpay] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -96,6 +100,10 @@ export default function SubscribePage(props: Props) {
   }
 
   async function handleStripeCheckout() {
+    if (!stripePublishableKey) {
+      setMessage("Stripe is not configured.");
+      return;
+    }
     const token = typeof window !== "undefined" ? window.localStorage.getItem("accessToken") : null;
     if (!token || !userId) {
       setMessage("Please sign in before starting payment.");
@@ -106,29 +114,49 @@ export default function SubscribePage(props: Props) {
       setMessage("Select a plan first.");
       return;
     }
-    setMessage("Creating Stripe checkout session...");
-    const response = await fetch(`${apiBaseUrl}/api/payments/stripe/checkout-session`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        userId,
-        planId: plan.id,
-        priceInr: plan.priceInr
-      })
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.data?.url) {
-      setMessage(payload.message ?? "Unable to start Stripe checkout");
-      return;
-    }
-    if (typeof window !== "undefined") {
-      window.location.href = payload.data.url;
+    setIsProcessingStripe(true);
+    setMessage("Starting Stripe checkout...");
+    try {
+      const stripeModule = await import("@stripe/stripe-js");
+      const stripe = await stripeModule.loadStripe(stripePublishableKey);
+      if (!stripe) {
+        setMessage("Unable to load Stripe.");
+        setIsProcessingStripe(false);
+        return;
+      }
+      const response = await fetch(`${apiBaseUrl}/api/payments/stripe/checkout-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId,
+          planId: plan.id,
+          priceInr: plan.priceInr
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.data?.id) {
+        setMessage(payload.message ?? "Unable to start Stripe checkout");
+        setIsProcessingStripe(false);
+        return;
+      }
+      const result = await stripe.redirectToCheckout({ sessionId: payload.data.id as string });
+      if (result.error) {
+        setMessage(result.error.message ?? "Stripe redirect failed.");
+      }
+    } catch {
+      setMessage("Stripe checkout failed.");
+    } finally {
+      setIsProcessingStripe(false);
     }
   }
 
   async function handleRazorpayOrder() {
+    if (!razorpayKeyId) {
+      setMessage("Razorpay is not configured.");
+      return;
+    }
     const token = typeof window !== "undefined" ? window.localStorage.getItem("accessToken") : null;
     if (!token || !userId) {
       setMessage("Please sign in before starting payment.");
@@ -139,24 +167,63 @@ export default function SubscribePage(props: Props) {
       setMessage("Select a plan first.");
       return;
     }
+    setIsProcessingRazorpay(true);
     setMessage("Creating Razorpay order...");
-    const response = await fetch(`${apiBaseUrl}/api/payments/razorpay/order`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        userId,
-        planId: plan.id,
-        priceInr: plan.priceInr
-      })
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.data?.id) {
-      setMessage(payload.message ?? "Unable to create Razorpay order");
-      return;
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/payments/razorpay/order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId,
+          planId: plan.id,
+          priceInr: plan.priceInr
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.data?.id) {
+        setMessage(payload.message ?? "Unable to create Razorpay order");
+        setIsProcessingRazorpay(false);
+        return;
+      }
+      const scriptId = "razorpay-checkout-js";
+      if (!document.getElementById(scriptId)) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.id = scriptId;
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Unable to load Razorpay SDK"));
+          document.body.appendChild(script);
+        });
+      }
+      const RazorpayConstructor = (window as unknown as { Razorpay?: new (options: unknown) => { open: () => void } })
+        .Razorpay;
+      if (!RazorpayConstructor) {
+        setMessage("Razorpay SDK is unavailable.");
+        setIsProcessingRazorpay(false);
+        return;
+      }
+      const options = {
+        key: razorpayKeyId,
+        amount: payload.data.amount,
+        currency: payload.data.currency,
+        name: "Unified OTT Subscription",
+        description: `Plan ${plan.name}`,
+        order_id: payload.data.id,
+        notes: {
+          planId: plan.id,
+          userId
+        }
+      };
+      const razorpayInstance = new RazorpayConstructor(options);
+      razorpayInstance.open();
+    } catch {
+      setMessage("Razorpay checkout failed.");
+    } finally {
+      setIsProcessingRazorpay(false);
     }
-    setMessage(`Razorpay order created. Order ID: ${payload.data.id}`);
   }
 
   return (
@@ -205,15 +272,17 @@ export default function SubscribePage(props: Props) {
             className="mt-2 rounded-md border border-gray-700 px-4 py-2 text-xs font-medium hover:border-gray-500"
             type="button"
             onClick={handleStripeCheckout}
+            disabled={isProcessingStripe}
           >
-            Pay with Stripe
+            {isProcessingStripe ? "Processing Stripe..." : "Pay with Stripe"}
           </button>
           <button
             className="mt-2 rounded-md border border-gray-700 px-4 py-2 text-xs font-medium hover:border-gray-500"
             type="button"
             onClick={handleRazorpayOrder}
+            disabled={isProcessingRazorpay}
           >
-            Pay with Razorpay
+            {isProcessingRazorpay ? "Processing Razorpay..." : "Pay with Razorpay"}
           </button>
         </div>
       </form>

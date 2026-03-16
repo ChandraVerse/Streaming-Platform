@@ -7,6 +7,8 @@ const router = Router();
 const ingestSchema = z.object({
   userId: z.string().optional(),
   contentId: z.string().optional(),
+  positionSeconds: z.number().int().nonnegative().optional(),
+  durationSeconds: z.number().int().positive().optional(),
   kind: z.enum(["play", "pause", "complete", "signup", "subscription_activated"])
 });
 
@@ -103,18 +105,26 @@ router.get("/continue-watching", async (request, response) => {
       $match: {
         userId,
         contentId: { $exists: true, $ne: null },
-        kind: { $in: ["play", "complete"] }
+        kind: { $in: ["play", "pause", "complete"] }
       }
+    },
+    {
+      $sort: { createdAt: -1 }
     },
     {
       $group: {
         _id: "$contentId",
-        lastPlayedAt: { $max: "$createdAt" }
+        lastEvent: { $first: "$$ROOT" }
+      }
+    },
+    {
+      $match: {
+        "lastEvent.kind": { $ne: "complete" }
       }
     },
     {
       $sort: {
-        lastPlayedAt: -1
+        "lastEvent.createdAt": -1
       }
     },
     {
@@ -124,8 +134,10 @@ router.get("/continue-watching", async (request, response) => {
 
   response.json({
     data: results.map((entry) => ({
-      contentId: entry._id as string,
-      lastPlayedAt: entry.lastPlayedAt as Date
+      contentId: (entry.lastEvent.contentId ?? "") as string,
+      lastPlayedAt: entry.lastEvent.createdAt as Date,
+      positionSeconds: (entry.lastEvent.positionSeconds ?? null) as number | null,
+      durationSeconds: (entry.lastEvent.durationSeconds ?? null) as number | null
     }))
   });
 });
