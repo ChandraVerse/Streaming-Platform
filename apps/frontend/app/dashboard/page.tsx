@@ -99,6 +99,12 @@ export default function DashboardPage() {
             </article>
           ))}
         </div>
+        <a
+          className="mt-4 inline-block rounded-md bg-red-600 px-4 py-2 text-sm font-medium hover:bg-red-500"
+          href="/subscribe"
+        >
+          Manage subscription
+        </a>
       </section>
     </main>
   );

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { SubscriptionModel } from "../models/subscription.model.js";
+import { ReferralModel } from "../models/referral.model.js";
 import { UserModel } from "../models/user.model.js";
 
 const router = Router();
@@ -32,6 +33,23 @@ router.get("/me", requireAuth, async (request: AuthenticatedRequest, response) =
         isKids: profile.isKids
       })),
       subscription: subscription ? { status: subscription.status, planId: subscription.planId } : undefined
+    }
+  });
+});
+
+router.get("/me/referrals", requireAuth, async (request: AuthenticatedRequest, response) => {
+  const userId = request.auth?.userId;
+  const referrals = await ReferralModel.find({ referrerId: userId });
+  const referees = await UserModel.find({ _id: { $in: referrals.map((entry) => entry.refereeId) } });
+
+  response.json({
+    data: {
+      total: referrals.length,
+      referees: referees.map((user) => ({
+        userId: user.id,
+        fullName: user.fullName,
+        email: user.email
+      }))
     }
   });
 });

@@ -1,15 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-export default function SignUpPage() {
+type Props = {
+  searchParams?: {
+    ref?: string;
+  };
+};
+
+export default function SignUpPage(props: Props) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const ref = props.searchParams?.ref;
+    if (ref && typeof window !== "undefined") {
+      window.localStorage.setItem("referralCode", ref);
+    }
+  }, [props.searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

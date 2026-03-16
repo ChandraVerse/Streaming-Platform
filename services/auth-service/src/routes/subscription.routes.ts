@@ -4,6 +4,7 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { SubscriptionModel, SUBSCRIPTION_PLANS } from "../models/subscription.model.js";
 import { UserModel } from "../models/user.model.js";
+import { ReferralModel } from "../models/referral.model.js";
 
 const router = Router();
 
@@ -39,15 +40,29 @@ router.post("/activate", requireAuth, async (request: AuthenticatedRequest, resp
   if (parsed.data.referralCode && userId) {
     const referrer = await UserModel.findOne({ referralCode: parsed.data.referralCode });
     if (referrer && String(referrer.id) !== userId) {
-      await SubscriptionModel.updateOne(
-        { userId: referrer.id },
-        {
-          $setOnInsert: {
-            planId: subscription.planId,
-            status: "active",
-            startedAt: new Date()
-          }
-        },
+      let referrerSubscription = await SubscriptionModel.findOne({ userId: referrer.id });
+      const now = new Date();
+      const monthMs = 30 * 24 * 60 * 60 * 1000;
+      if (referrerSubscription) {
+        const currentEnd = referrerSubscription.endsAt ?? referrerSubscription.startedAt;
+        referrerSubscription.endsAt = new Date(currentEnd.getTime() + monthMs);
+        await referrerSubscription.save();
+      } else {
+        referrerSubscription = await SubscriptionModel.create({
+          userId: referrer.id,
+          planId: subscription.planId,
+          status: "active",
+          startedAt: now,
+          endsAt: new Date(now.getTime() + monthMs)
+        });
+      }
+
+      referrer.referralCount = (referrer.referralCount ?? 0) + 1;
+      await referrer.save();
+
+      await ReferralModel.updateOne(
+        { referrerId: referrer.id, refereeId: userId },
+        { referrerId: referrer.id, refereeId: userId },
         { upsert: true }
       );
     }
