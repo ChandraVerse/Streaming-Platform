@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [status, setStatus] = useState("Loading...");
   const [following, setFollowing] = useState<{ userId: string; fullName: string; email: string }[]>([]);
+  const [referrals, setReferrals] = useState<{ total: number; referees: { userId: string; fullName: string; email: string }[] } | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -18,7 +19,7 @@ export default function DashboardPage() {
         setStatus("Please sign in first.");
         return;
       }
-      const [meRes, planRes, followingRes] = await Promise.all([
+      const [meRes, planRes, followingRes, referralsRes] = await Promise.all([
         fetch(`${apiBaseUrl}/api/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`
@@ -26,6 +27,11 @@ export default function DashboardPage() {
         }),
         fetch(`${apiBaseUrl}/api/subscriptions/plans`),
         fetch(`${apiBaseUrl}/api/social/following`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }),
+        fetch(`${apiBaseUrl}/api/users/me/referrals`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -38,9 +44,11 @@ export default function DashboardPage() {
       const mePayload = await meRes.json();
       const plansPayload = await planRes.json();
       const followingPayload = followingRes.ok ? await followingRes.json() : { data: [] };
+      const referralsPayload = referralsRes.ok ? await referralsRes.json() : { data: null };
       setSession(mePayload.data);
       setPlans(plansPayload.data);
       setFollowing(followingPayload.data);
+      setReferrals(referralsPayload.data);
       setStatus("Ready");
     }
     loadData().catch(() => setStatus("Unable to load dashboard"));
@@ -68,6 +76,24 @@ export default function DashboardPage() {
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+      {session && referrals ? (
+        <section className="rounded-xl border border-gray-800 p-5">
+          <h2 className="text-xl font-semibold">Referrals</h2>
+          <p className="mt-1 text-sm text-gray-300">Total referrals: {referrals.total}</p>
+          {referrals.referees.length > 0 ? (
+            <ul className="mt-2 grid gap-2 md:grid-cols-3">
+              {referrals.referees.map((user) => (
+                <li className="rounded-md bg-gray-900 p-3 text-sm" key={user.userId}>
+                  <p className="font-medium">{user.fullName}</p>
+                  <p className="text-xs text-gray-400">{user.email}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-gray-300">No referrals yet.</p>
+          )}
         </section>
       ) : null}
       {session ? (
