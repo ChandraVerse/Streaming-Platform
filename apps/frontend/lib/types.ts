@@ -22,3 +22,35 @@ export type UserSession = {
     planId: string;
   };
 };
+
+export type CatalogItem = {
+  id: string;
+  title: string;
+  slug: string;
+  posterImageUrl?: string;
+  kind: string;
+  genres: string[];
+  isPremium: boolean;
+};
+
+export type ContentDetail = {
+  id: string;
+  title: string;
+  description: string;
+  slug: string;
+  kind: string;
+  releaseYear?: number;
+  durationMinutes?: number;
+  languages: string[];
+  genres: string[];
+  ageRating?: string;
+  cast: string[];
+  crew: string[];
+  posterImageUrl?: string;
+  bannerImageUrl?: string;
+  muxPlaybackId?: string;
+  isPremium: boolean;
+  isKids: boolean;
+  isLive: boolean;
+  liveStartTime?: string;
+};

@@ -19,9 +19,86 @@ app.get("/health", (_request, response) => {
 });
 
 app.use(
-  "/api",
+  "/api/auth",
   createProxyMiddleware({
     target: env.AUTH_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/users",
+  createProxyMiddleware({
+    target: env.AUTH_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/subscriptions",
+  createProxyMiddleware({
+    target: env.AUTH_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/content",
+  createProxyMiddleware({
+    target: env.CONTENT_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/search",
+  createProxyMiddleware({
+    target: env.CONTENT_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/mux",
+  createProxyMiddleware({
+    target: env.CONTENT_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/payments",
+  createProxyMiddleware({
+    target: env.PAYMENTS_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
+  "/api/analytics",
+  createProxyMiddleware({
+    target: env.ANALYTICS_SERVICE_URL,
     changeOrigin: true,
     pathRewrite: {
       "^/api": ""

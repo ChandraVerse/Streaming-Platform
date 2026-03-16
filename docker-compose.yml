@@ -18,17 +18,64 @@ services:
       - "4001:4001"
     depends_on:
       - mongodb
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
   api-gateway:
     build:
       context: ./services/api-gateway
     environment:
       PORT: 4000
       AUTH_SERVICE_URL: http://auth-service:4001
+      CONTENT_SERVICE_URL: http://content-service:4002
+      PAYMENTS_SERVICE_URL: http://payments-service:4003
+      ANALYTICS_SERVICE_URL: http://analytics-service:4004
       CORS_ORIGIN: http://localhost:3000
     ports:
       - "4000:4000"
     depends_on:
       - auth-service
+      - content-service
+      - payments-service
+      - analytics-service
+  content-service:
+    build:
+      context: ./services/content-service
+    environment:
+      PORT: 4002
+      MONGODB_URI: mongodb://mongodb:27017/unified-ott
+      CORS_ORIGIN: http://localhost:3000
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "4002:4002"
+    depends_on:
+      - mongodb
+      - elasticsearch
+  payments-service:
+    build:
+      context: ./services/payments-service
+    environment:
+      PORT: 4003
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "4003:4003"
+    depends_on:
+      - auth-service
+  analytics-service:
+    build:
+      context: ./services/analytics-service
+    environment:
+      PORT: 4004
+      MONGODB_URI: mongodb://mongodb:27017/unified-ott
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "4004:4004"
+    depends_on:
+      - mongodb
   frontend:
     build:
       context: ./apps/frontend
