@@ -1,0 +1,21 @@
+{
+  "name": "unified-ott-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --workspace apps/frontend run dev",
+    "dev:api": "npm --workspace services/api-gateway run dev",
+    "dev:auth": "npm --workspace services/auth-service run dev",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:api\" \"npm run dev:auth\"",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
