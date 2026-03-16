@@ -25,6 +25,7 @@ router.get("/me", requireAuth, async (request: AuthenticatedRequest, response) =
       userId: user.id,
       fullName: user.fullName,
       email: user.email,
+      referralCode: user.referralCode,
       profiles: user.profiles.map((profile) => ({
         id: profile._id?.toString() ?? "",
         name: profile.name,

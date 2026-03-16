@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { SubscriptionModel, SUBSCRIPTION_PLANS } from "../models/subscription.model.js";
+import { UserModel } from "../models/user.model.js";
 
 const router = Router();
 
@@ -22,10 +23,11 @@ router.post("/activate", requireAuth, async (request: AuthenticatedRequest, resp
     return;
   }
 
+  const userId = request.auth?.userId;
   const subscription = await SubscriptionModel.findOneAndUpdate(
-    { userId: request.auth?.userId },
+    { userId },
     {
-      userId: request.auth?.userId,
+      userId,
       planId: parsed.data.planId,
       status: "active",
       startedAt: new Date(),
@@ -33,6 +35,23 @@ router.post("/activate", requireAuth, async (request: AuthenticatedRequest, resp
     },
     { upsert: true, new: true }
   );
+
+  if (parsed.data.referralCode && userId) {
+    const referrer = await UserModel.findOne({ referralCode: parsed.data.referralCode });
+    if (referrer && String(referrer.id) !== userId) {
+      await SubscriptionModel.updateOne(
+        { userId: referrer.id },
+        {
+          $setOnInsert: {
+            planId: subscription.planId,
+            status: "active",
+            startedAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    }
+  }
 
   response.json({
     message: "Subscription activated",

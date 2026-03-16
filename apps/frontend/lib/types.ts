@@ -16,6 +16,7 @@ export type UserSession = {
   userId: string;
   email: string;
   fullName: string;
+  referralCode?: string;
   profiles: Profile[];
   subscription?: {
     status: string;

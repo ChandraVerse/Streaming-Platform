@@ -53,5 +53,42 @@ router.get("/summary", async (_request, response) => {
   });
 });
 
-export const analyticsRoutes = router;
+router.get("/trending", async (request, response) => {
+  const windowHoursParam = request.query.windowHours;
+  const windowHours = windowHoursParam ? Number(windowHoursParam) || 24 : 24;
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowHours * 60 * 60 * 1000);
 
+  const results = await EventModel.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: windowStart },
+        contentId: { $exists: true, $ne: null },
+        kind: { $in: ["play", "complete"] }
+      }
+    },
+    {
+      $group: {
+        _id: "$contentId",
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: {
+        count: -1
+      }
+    },
+    {
+      $limit: 10
+    }
+  ]);
+
+  response.json({
+    data: results.map((entry) => ({
+      contentId: entry._id as string,
+      playCount: entry.count as number
+    }))
+  });
+});
+
+export const analyticsRoutes = router;

@@ -48,10 +48,12 @@ router.post("/register", async (request, response) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const referralCode = `${email.split("@")[0]}-${Math.random().toString(36).slice(2, 8)}`.toLowerCase();
   const user = await UserModel.create({
     fullName,
     email,
     passwordHash,
+    referralCode,
     profiles: [{ name: "Main Profile", isKids: false }]
   });
 
@@ -110,6 +112,7 @@ router.post("/request-otp", async (request, response) => {
       fullName: email,
       email,
       passwordHash: await bcrypt.hash(Math.random().toString(36), 10),
+      referralCode: `${email.split("@")[0]}-${Math.random().toString(36).slice(2, 8)}`.toLowerCase(),
       profiles: [{ name: "Main Profile", isKids: false }]
     }));
 
@@ -183,6 +186,7 @@ router.post("/oauth", async (request, response) => {
       email,
       passwordHash: await bcrypt.hash(Math.random().toString(36), 10),
       oauthProviders: { [`${provider}Id`]: providerId } as never,
+      referralCode: `${email.split("@")[0]}-${Math.random().toString(36).slice(2, 8)}`.toLowerCase(),
       profiles: [{ name: "Main Profile", isKids: false }],
       emailVerified: true
     });

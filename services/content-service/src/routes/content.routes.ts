@@ -151,4 +151,35 @@ router.get("/:id/recommendations", async (request, response) => {
   });
 });
 
+router.get("/bulk", async (request, response) => {
+  const idsParam = request.query.ids;
+  if (!idsParam) {
+    response.json({ data: [] });
+    return;
+  }
+
+  const ids = String(idsParam)
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  if (ids.length === 0) {
+    response.json({ data: [] });
+    return;
+  }
+
+  const items = await ContentModel.find({ _id: { $in: ids } });
+  response.json({
+    data: items.map((content) => ({
+      id: content.id,
+      title: content.title,
+      slug: content.slug,
+      posterImageUrl: content.posterImageUrl,
+      kind: content.kind,
+      genres: content.genres,
+      isPremium: content.isPremium
+    }))
+  });
+});
+
 export const contentRoutes = router;

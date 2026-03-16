@@ -54,6 +54,11 @@ export default function DashboardPage() {
         <section className="rounded-xl border border-gray-800 p-5">
           <h2 className="text-xl font-semibold">{session.fullName}</h2>
           <p className="mt-1 text-gray-300">{session.email}</p>
+          {session.referralCode ? (
+            <p className="mt-2 text-xs text-gray-400">
+              Your referral code: <span className="font-mono">{session.referralCode}</span>
+            </p>
+          ) : null}
           <h3 className="mt-4 font-medium">Profiles</h3>
           <ul className="mt-2 grid gap-2 md:grid-cols-3">
             {session.profiles.map((profile) => (

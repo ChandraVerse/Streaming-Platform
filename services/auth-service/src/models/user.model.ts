@@ -19,6 +19,7 @@ export type UserDocument = {
   emailVerified: boolean;
   otpCode?: string;
   otpExpiresAt?: Date;
+   referralCode: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,7 +45,8 @@ const userSchema = new Schema<UserDocument>(
     refreshToken: { type: String },
     emailVerified: { type: Boolean, default: false },
     otpCode: { type: String },
-    otpExpiresAt: { type: Date }
+    otpExpiresAt: { type: Date },
+    referralCode: { type: String, unique: true }
   },
   { timestamps: true }
 );
