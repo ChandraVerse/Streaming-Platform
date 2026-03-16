@@ -4,7 +4,7 @@ import { CONTENT_INDEX, searchClient } from "./client.js";
 export async function indexContent(content: ContentDocument) {
   await searchClient.index({
     index: CONTENT_INDEX,
-    id: content.id,
+    id: (content as unknown as { id: string }).id,
     document: {
       title: content.title,
       description: content.description,

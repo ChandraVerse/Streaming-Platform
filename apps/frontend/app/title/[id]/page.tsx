@@ -53,6 +53,21 @@ export default async function TitlePage(props: Props) {
             className="h-full w-full object-contain"
             controls
             src={`https://stream.mux.com/${content.muxPlaybackId}.m3u8`}
+            onPlay={async () => {
+              try {
+                await fetch(`${apiBaseUrl}/api/analytics/events`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    kind: "play",
+                    contentId: content.id
+                  })
+                });
+              } catch {
+              }
+            }}
           >
             Your browser does not support Mux playback.
           </video>

@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { subscriptionRoutes } from "./routes/subscription.routes.js";
 import { userRoutes } from "./routes/user.routes.js";
+import { socialRoutes } from "./routes/social.routes.js";
 
 export const app = express();
 
@@ -31,3 +32,4 @@ app.get("/health", (_request, response) => {
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/subscriptions", subscriptionRoutes);
+app.use("/social", socialRoutes);

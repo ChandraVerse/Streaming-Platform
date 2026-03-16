@@ -22,19 +22,31 @@ export default function HomePage() {
         </div>
       </section>
       <section className="flex flex-wrap gap-3">
-        <Link className="rounded-md bg-red-600 px-4 py-2 font-medium hover:bg-red-500" href="/signup">
+        <Link className="rounded-md bg-red-600 px-4 py-2 font-medium hover:bg-red-500" href={{ pathname: "/signup" }}>
           Get Started
         </Link>
-        <Link className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500" href="/signin">
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/signin" }}
+        >
           Sign In
         </Link>
-        <Link className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500" href="/dashboard">
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/dashboard" }}
+        >
           Open Dashboard
         </Link>
-        <Link className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500" href="/browse">
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/browse" }}
+        >
           Browse Catalog
         </Link>
-        <Link className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500" href="/search">
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/search" }}
+        >
           Search
         </Link>
       </section>

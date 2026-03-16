@@ -53,7 +53,7 @@ router.post("/create-asset", async (request, response) => {
   }
 
   const asset = await muxVideo.assets.create({
-    input: parsed.data.inputUrl,
+    input: [{ url: parsed.data.inputUrl }],
     playback_policy: ["public"]
   });
 
@@ -61,10 +61,9 @@ router.post("/create-asset", async (request, response) => {
     message: "Mux asset created",
     data: {
       assetId: asset.id,
-      playbackIds: asset.playback_ids?.map((playback) => playback.id) ?? []
+      playbackIds: asset.playback_ids?.map((playback: { id: string }) => playback.id) ?? []
     }
   });
 });
 
 export const muxRoutes = router;
-

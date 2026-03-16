@@ -15,7 +15,7 @@ export function CatalogGrid(props: Props) {
       {props.items.map((item) => (
         <Link
           className="group overflow-hidden rounded-md border border-gray-800 bg-gray-900"
-          href={`/title/${item.id}`}
+          href={{ pathname: `/title/${item.id}` }}
           key={item.id}
         >
           <div className="aspect-[2/3] bg-gray-800">
@@ -36,4 +36,3 @@ export function CatalogGrid(props: Props) {
     </div>
   );
 }
-
