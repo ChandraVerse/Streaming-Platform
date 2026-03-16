@@ -34,6 +34,9 @@ export default function HomePage() {
         <Link className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500" href="/browse">
           Browse Catalog
         </Link>
+        <Link className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500" href="/search">
+          Search
+        </Link>
       </section>
     </main>
   );

@@ -16,6 +16,9 @@ export type UserDocument = {
   };
   profiles: Profile[];
   refreshToken?: string;
+  emailVerified: boolean;
+  otpCode?: string;
+  otpExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -38,7 +41,10 @@ const userSchema = new Schema<UserDocument>(
       facebookId: { type: String }
     },
     profiles: { type: [profileSchema], default: [] },
-    refreshToken: { type: String }
+    refreshToken: { type: String },
+    emailVerified: { type: Boolean, default: false },
+    otpCode: { type: String },
+    otpExpiresAt: { type: Date }
   },
   { timestamps: true }
 );

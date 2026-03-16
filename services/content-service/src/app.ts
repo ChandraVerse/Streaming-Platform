@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import { contentRoutes } from "./routes/content.routes.js";
 import { searchRoutes } from "./routes/search.routes.js";
 import { muxRoutes } from "./routes/mux.routes.js";
+import { ratingRoutes } from "./routes/rating.routes.js";
 
 export const app = express();
 
@@ -31,3 +32,4 @@ app.get("/health", (_request, response) => {
 app.use("/content", contentRoutes);
 app.use("/search", searchRoutes);
 app.use("/mux", muxRoutes);
+app.use("/ratings", ratingRoutes);

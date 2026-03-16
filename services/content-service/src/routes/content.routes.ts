@@ -123,4 +123,32 @@ router.get("/:id", async (request, response) => {
   });
 });
 
+router.get("/:id/recommendations", async (request, response) => {
+  const current = await ContentModel.findById(request.params.id);
+  if (!current) {
+    response.status(404).json({ message: "Content not found" });
+    return;
+  }
+
+  const recommendations = await ContentModel.find({
+    _id: { $ne: current.id },
+    genres: { $in: current.genres },
+    isKids: current.isKids
+  })
+    .sort({ createdAt: -1 })
+    .limit(10);
+
+  response.json({
+    data: recommendations.map((content) => ({
+      id: content.id,
+      title: content.title,
+      slug: content.slug,
+      posterImageUrl: content.posterImageUrl,
+      kind: content.kind,
+      genres: content.genres,
+      isPremium: content.isPremium
+    }))
+  });
+});
+
 export const contentRoutes = router;
