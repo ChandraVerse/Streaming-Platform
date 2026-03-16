@@ -63,9 +63,25 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold">{session.fullName}</h2>
           <p className="mt-1 text-gray-300">{session.email}</p>
           {session.referralCode ? (
-            <p className="mt-2 text-xs text-gray-400">
-              Your referral code: <span className="font-mono">{session.referralCode}</span>
-            </p>
+            <div className="mt-2 space-y-1 text-xs text-gray-400">
+              <p>
+                Your referral code: <span className="font-mono">{session.referralCode}</span>
+              </p>
+              <button
+                className="rounded-md border border-gray-700 px-2 py-1 text-[11px] font-medium hover:border-gray-500"
+                type="button"
+                onClick={async () => {
+                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  const link = `${origin}/signup?ref=${session.referralCode}`;
+                  try {
+                    await navigator.clipboard.writeText(link);
+                  } catch {
+                  }
+                }}
+              >
+                Copy referral link
+              </button>
+            </div>
           ) : null}
           <h3 className="mt-4 font-medium">Profiles</h3>
           <ul className="mt-2 grid gap-2 md:grid-cols-3">
