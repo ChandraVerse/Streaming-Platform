@@ -63,6 +63,17 @@ app.use(
 );
 
 app.use(
+  "/api/ratings",
+  createProxyMiddleware({
+    target: env.CONTENT_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api": ""
+    }
+  })
+);
+
+app.use(
   "/api/search",
   createProxyMiddleware({
     target: env.CONTENT_SERVICE_URL,

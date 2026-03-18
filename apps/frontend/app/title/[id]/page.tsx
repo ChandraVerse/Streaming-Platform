@@ -1,5 +1,6 @@
 import { CatalogGrid } from "@/components/catalog-grid";
 import { AnalyticsVideoPlayer } from "@/components/analytics-video-player";
+import { RatingsSection } from "@/components/ratings-section";
 import type { CatalogItem, ContentDetail } from "@/lib/types";
 
 type Props = {
@@ -47,6 +48,13 @@ export default async function TitlePage(props: Props) {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10">
       <h1 className="text-3xl font-bold">{content.title}</h1>
+      {content.isLive ? (
+        <p className="text-sm font-semibold text-red-400">
+          {content.liveStartTime && new Date(content.liveStartTime) > new Date()
+            ? "Live starting soon"
+            : "Live now"}
+        </p>
+      ) : null}
       <p className="text-sm text-gray-300">{content.description}</p>
       <div className="mt-2 flex flex-wrap gap-2 text-sm">
         <a
@@ -65,6 +73,7 @@ export default async function TitlePage(props: Props) {
           <AnalyticsVideoPlayer contentId={content.id} muxPlaybackId={content.muxPlaybackId} />
         </div>
       ) : null}
+      <RatingsSection contentId={content.id} />
       {recommendations.length > 0 ? (
         <section className="mt-4 space-y-3">
           <h2 className="text-xl font-semibold">Because you watched this</h2>

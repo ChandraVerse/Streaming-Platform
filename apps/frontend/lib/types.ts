@@ -32,6 +32,8 @@ export type CatalogItem = {
   kind: string;
   genres: string[];
   isPremium: boolean;
+  isLive?: boolean;
+  liveStartTime?: string;
 };
 
 export type ContentDetail = {
@@ -54,4 +56,12 @@ export type ContentDetail = {
   isKids: boolean;
   isLive: boolean;
   liveStartTime?: string;
+};
+
+export type Rating = {
+  id: string;
+  userId: string;
+  rating: number;
+  review?: string;
+  createdAt: string;
 };

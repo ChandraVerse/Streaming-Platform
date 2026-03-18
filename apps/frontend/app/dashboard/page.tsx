@@ -12,6 +12,9 @@ export default function DashboardPage() {
   const [following, setFollowing] = useState<{ userId: string; fullName: string; email: string }[]>([]);
   const [referrals, setReferrals] = useState<{ total: number; referees: { userId: string; fullName: string; email: string }[] } | null>(null);
   const [continueWatching, setContinueWatching] = useState<(CatalogItem & { progressFraction?: number })[]>([]);
+  const [topTen, setTopTen] = useState<CatalogItem[]>([]);
+  const [liveNow, setLiveNow] = useState<CatalogItem[]>([]);
+  const [friendsActivity, setFriendsActivity] = useState<CatalogItem[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -95,6 +98,90 @@ export default function DashboardPage() {
               });
             }
           }
+        }
+      } catch {
+      }
+      try {
+        const trendingRes = await fetch(`${apiBaseUrl}/api/analytics/trending?windowHours=720`);
+        if (trendingRes.ok) {
+          const trendingPayload = await trendingRes.json();
+          const ids: string[] = trendingPayload.data.map(
+            (entry: { contentId: string; playCount: number }) => entry.contentId
+          );
+          if (ids.length > 0) {
+            const bulkResponse = await fetch(
+              `${apiBaseUrl}/api/content/bulk?ids=${encodeURIComponent(ids.join(","))}`
+            );
+            if (bulkResponse.ok) {
+              const bulkPayload = await bulkResponse.json();
+              setTopTen(bulkPayload.data as CatalogItem[]);
+            }
+          }
+        }
+      } catch {
+      }
+      try {
+        const followees: { userId: string }[] = Array.isArray(followingPayload.data)
+          ? followingPayload.data
+          : [];
+        const limitedFollowees = followees.slice(0, 10);
+        const counts = new Map<
+          string,
+          {
+            count: number;
+            latest: string;
+          }
+        >();
+        for (const followee of limitedFollowees) {
+          const historyRes = await fetch(
+            `${apiBaseUrl}/api/analytics/history?userId=${encodeURIComponent(followee.userId)}`
+          );
+          if (!historyRes.ok) {
+            continue;
+          }
+          const historyPayload = await historyRes.json();
+          const entries = historyPayload.data as {
+            contentId: string;
+            completedAt: string;
+          }[];
+          for (const entry of entries) {
+            const existing = counts.get(entry.contentId);
+            if (!existing) {
+              counts.set(entry.contentId, { count: 1, latest: entry.completedAt });
+            } else {
+              const latest =
+                new Date(entry.completedAt) > new Date(existing.latest)
+                  ? entry.completedAt
+                  : existing.latest;
+              counts.set(entry.contentId, { count: existing.count + 1, latest });
+            }
+          }
+        }
+        const ranked = Array.from(counts.entries())
+          .sort((a, b) => {
+            if (a[1].count !== b[1].count) {
+              return b[1].count - a[1].count;
+            }
+            return new Date(b[1].latest).getTime() - new Date(a[1].latest).getTime();
+          })
+          .slice(0, 10);
+        const friendIds = ranked.map(([contentId]) => contentId);
+        if (friendIds.length > 0) {
+          const bulkRes = await fetch(
+            `${apiBaseUrl}/api/content/bulk?ids=${encodeURIComponent(friendIds.join(","))}`
+          );
+          if (bulkRes.ok) {
+            const bulkPayload = await bulkRes.json();
+            setFriendsActivity(bulkPayload.data as CatalogItem[]);
+          }
+        }
+      } catch {
+      }
+      try {
+        const liveRes = await fetch(`${apiBaseUrl}/api/content?liveNow=true&pageSize=10`);
+        if (liveRes.ok) {
+          const livePayload = await liveRes.json();
+          setLiveNow(livePayload.data as CatalogItem[]);
         }
       } catch {
       }
@@ -213,6 +300,96 @@ export default function DashboardPage() {
                       />
                     </div>
                   ) : null}
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {session && friendsActivity.length > 0 ? (
+        <section className="rounded-xl border border-gray-800 p-5">
+          <h2 className="text-xl font-semibold">From People You Follow</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
+            {friendsActivity.map((item) => (
+              <a
+                className="group overflow-hidden rounded-md border border-gray-800 bg-gray-900"
+                href={`/title/${item.id}`}
+                key={item.id}
+              >
+                <div className="aspect-[2/3] bg-gray-800">
+                  {item.posterImageUrl ? (
+                    <img
+                      alt={item.title}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      src={item.posterImageUrl}
+                    />
+                  ) : null}
+                </div>
+                <div className="p-3">
+                  <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {liveNow.length > 0 ? (
+        <section className="rounded-xl border border-gray-800 p-5">
+          <h2 className="text-xl font-semibold">Live Now</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
+            {liveNow.map((item) => (
+              <a
+                className="group overflow-hidden rounded-md border border-gray-800 bg-gray-900"
+                href={`/title/${item.id}`}
+                key={item.id}
+              >
+                <div className="relative aspect-[2/3] bg-gray-800">
+                  {item.posterImageUrl ? (
+                    <img
+                      alt={item.title}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      src={item.posterImageUrl}
+                    />
+                  ) : null}
+                  <span className="absolute left-1 top-1 rounded-md bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold">
+                    LIVE
+                  </span>
+                </div>
+                <div className="p-3">
+                  <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {topTen.length > 0 ? (
+        <section className="rounded-xl border border-gray-800 p-5">
+          <h2 className="text-xl font-semibold">Top 10 Overall</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-5">
+            {topTen.map((item, index) => (
+              <a
+                className="group overflow-hidden rounded-md border border-gray-800 bg-gray-900"
+                href={`/title/${item.id}`}
+                key={item.id}
+              >
+                <div className="relative aspect-[2/3] bg-gray-800">
+                  {item.posterImageUrl ? (
+                    <img
+                      alt={item.title}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      src={item.posterImageUrl}
+                    />
+                  ) : null}
+                  <span className="absolute left-1 top-1 rounded-md bg-black/70 px-1.5 py-0.5 text-xs font-bold text-yellow-300">
+                    #{index + 1}
+                  </span>
+                </div>
+                <div className="p-3">
+                  <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
                 </div>
               </a>
             ))}
