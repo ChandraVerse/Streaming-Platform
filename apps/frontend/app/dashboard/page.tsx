@@ -141,6 +141,23 @@ export default function DashboardPage() {
         <section className="rounded-xl border border-gray-800 p-5">
           <h2 className="text-xl font-semibold">{session.fullName}</h2>
           <p className="mt-1 text-gray-300">{session.email}</p>
+          <div className="mt-2 text-xs text-gray-300">
+            {session.subscription ? (
+              <>
+                <span className="font-semibold">Subscription:</span>{" "}
+                <span className="uppercase">
+                  {session.subscription.planId} ({session.subscription.status})
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-red-300">No active subscription.</span>{" "}
+                <a className="text-red-400 underline" href="/subscribe">
+                  Subscribe now
+                </a>
+              </>
+            )}
+          </div>
           {session.referralCode ? (
             <div className="mt-2 space-y-1 text-xs text-gray-400">
               <p>
@@ -230,6 +247,13 @@ export default function DashboardPage() {
                 <div className="p-3">
                   <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
                   <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+                  {item.isPremium ? (
+                    <span className="mt-1 inline-block rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-300">
+                      {session.subscription && session.subscription.status === "active"
+                        ? "Premium"
+                        : "Premium • Locked"}
+                    </span>
+                  ) : null}
                   {typeof item.progressFraction === "number" ? (
                     <div className="mt-2 h-1 w-full rounded bg-gray-800">
                       <div
@@ -269,6 +293,13 @@ export default function DashboardPage() {
                   <span className="mt-2 inline-block rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-50">
                     Completed
                   </span>
+                  {item.isPremium ? (
+                    <span className="mt-1 inline-block rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-300">
+                      {session.subscription && session.subscription.status === "active"
+                        ? "Premium"
+                        : "Premium • Locked"}
+                    </span>
+                  ) : null}
                 </div>
               </a>
             ))}

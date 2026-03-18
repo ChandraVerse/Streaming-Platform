@@ -30,6 +30,11 @@ export function CatalogGrid(props: Props) {
           <div className="p-3">
             <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
             <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+            {item.isPremium ? (
+              <span className="mt-2 inline-block rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-300">
+                Premium
+              </span>
+            ) : null}
           </div>
         </Link>
       ))}
