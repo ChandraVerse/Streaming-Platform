@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { CatalogItem, Plan, UserSession } from "@/lib/types";
+import type { FeatureFlags } from "@/lib/feature-flags";
+import { getClientFeatureFlags } from "@/lib/feature-flags";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
@@ -15,8 +17,11 @@ export default function DashboardPage() {
   const [topTen, setTopTen] = useState<CatalogItem[]>([]);
   const [liveNow, setLiveNow] = useState<CatalogItem[]>([]);
   const [friendsActivity, setFriendsActivity] = useState<CatalogItem[]>([]);
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
 
   useEffect(() => {
+    const flags = getClientFeatureFlags();
+    setFeatureFlags(flags);
     async function loadData() {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -306,7 +311,7 @@ export default function DashboardPage() {
           </div>
         </section>
       ) : null}
-      {session && friendsActivity.length > 0 ? (
+      {session && friendsActivity.length > 0 && featureFlags?.friendsRow !== false ? (
         <section className="rounded-xl border border-gray-800 p-5">
           <h2 className="text-xl font-semibold">From People You Follow</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-4">
@@ -334,7 +339,7 @@ export default function DashboardPage() {
           </div>
         </section>
       ) : null}
-      {liveNow.length > 0 ? (
+      {liveNow.length > 0 && featureFlags?.liveNowRow !== false ? (
         <section className="rounded-xl border border-gray-800 p-5">
           <h2 className="text-xl font-semibold">Live Now</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-4">
@@ -365,7 +370,7 @@ export default function DashboardPage() {
           </div>
         </section>
       ) : null}
-      {topTen.length > 0 ? (
+      {topTen.length > 0 && featureFlags?.topTenRow !== false ? (
         <section className="rounded-xl border border-gray-800 p-5">
           <h2 className="text-xl font-semibold">Top 10 Overall</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-5">
