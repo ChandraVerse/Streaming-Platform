@@ -6,7 +6,7 @@ import type { CatalogItem } from "@/lib/types";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 export default function ContinueWatchingPage() {
-  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [items, setItems] = useState<(CatalogItem & { progressFraction?: number })[]>([]);
   const [status, setStatus] = useState("Loading...");
 
   useEffect(() => {
@@ -36,9 +36,13 @@ export default function ContinueWatchingPage() {
         return;
       }
       const analyticsPayload = await analyticsRes.json();
-      const ids: string[] = analyticsPayload.data.map(
-        (entry: { contentId: string; lastPlayedAt: string }) => entry.contentId
-      );
+      const entries = analyticsPayload.data as {
+        contentId: string;
+        lastPlayedAt: string;
+        positionSeconds?: number | null;
+        durationSeconds?: number | null;
+      }[];
+      const ids: string[] = entries.map((entry) => entry.contentId);
       if (ids.length === 0) {
         setItems([]);
         setStatus("No titles to continue.");
@@ -53,7 +57,30 @@ export default function ContinueWatchingPage() {
         return;
       }
       const bulkPayload = await bulkResponse.json();
-      setItems(bulkPayload.data as CatalogItem[]);
+      const progressById: Record<
+        string,
+        { positionSeconds: number | null; durationSeconds: number | null }
+      > = {};
+      for (const entry of entries) {
+        progressById[entry.contentId] = {
+          positionSeconds: entry.positionSeconds ?? null,
+          durationSeconds: entry.durationSeconds ?? null
+        };
+      }
+      const itemsWithProgress = (bulkPayload.data as CatalogItem[]).map((item: CatalogItem) => {
+        const progress = progressById[item.id];
+        let progressFraction: number | undefined;
+        if (
+          progress &&
+          progress.positionSeconds !== null &&
+          progress.durationSeconds !== null &&
+          progress.durationSeconds > 0
+        ) {
+          progressFraction = Math.min(1, progress.positionSeconds / progress.durationSeconds);
+        }
+        return { ...item, progressFraction };
+      });
+      setItems(itemsWithProgress);
       setStatus("Ready");
     }
 
@@ -83,6 +110,14 @@ export default function ContinueWatchingPage() {
             <div className="p-3">
               <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
               <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+              {typeof item.progressFraction === "number" ? (
+                <div className="mt-2 h-1 w-full rounded bg-gray-800">
+                  <div
+                    className="h-1 rounded bg-red-500"
+                    style={{ width: `${Math.round(item.progressFraction * 100)}%` }}
+                  />
+                </div>
+              ) : null}
             </div>
           </a>
         ))}
@@ -90,4 +125,3 @@ export default function ContinueWatchingPage() {
     </main>
   );
 }
-

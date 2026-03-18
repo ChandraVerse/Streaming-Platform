@@ -11,7 +11,7 @@ export default function DashboardPage() {
   const [status, setStatus] = useState("Loading...");
   const [following, setFollowing] = useState<{ userId: string; fullName: string; email: string }[]>([]);
   const [referrals, setReferrals] = useState<{ total: number; referees: { userId: string; fullName: string; email: string }[] } | null>(null);
-  const [continueWatching, setContinueWatching] = useState<CatalogItem[]>([]);
+  const [continueWatching, setContinueWatching] = useState<(CatalogItem & { progressFraction?: number })[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -46,7 +46,7 @@ export default function DashboardPage() {
       const plansPayload = await planRes.json();
       const followingPayload = followingRes.ok ? await followingRes.json() : { data: [] };
       const referralsPayload = referralsRes.ok ? await referralsRes.json() : { data: null };
-      let continueWatchingItems: CatalogItem[] = [];
+      let continueWatchingItems: (CatalogItem & { progressFraction?: number })[] = [];
       try {
         const userId = mePayload.data.userId as string;
         const analyticsRes = await fetch(
@@ -54,16 +54,45 @@ export default function DashboardPage() {
         );
         if (analyticsRes.ok) {
           const analyticsPayload = await analyticsRes.json();
-          const ids: string[] = analyticsPayload.data.map(
-            (entry: { contentId: string; lastPlayedAt: string }) => entry.contentId
-          );
+          const entries = analyticsPayload.data as {
+            contentId: string;
+            lastPlayedAt: string;
+            positionSeconds?: number | null;
+            durationSeconds?: number | null;
+          }[];
+          const ids: string[] = entries.map((entry) => entry.contentId);
           if (ids.length > 0) {
             const bulkResponse = await fetch(
               `${apiBaseUrl}/api/content/bulk?ids=${encodeURIComponent(ids.join(","))}`
             );
             if (bulkResponse.ok) {
               const bulkPayload = await bulkResponse.json();
-              continueWatchingItems = bulkPayload.data as CatalogItem[];
+              const progressById: Record<
+                string,
+                { positionSeconds: number | null; durationSeconds: number | null }
+              > = {};
+              for (const entry of entries) {
+                progressById[entry.contentId] = {
+                  positionSeconds: entry.positionSeconds ?? null,
+                  durationSeconds: entry.durationSeconds ?? null
+                };
+              }
+              continueWatchingItems = (bulkPayload.data as CatalogItem[]).map((item: CatalogItem) => {
+                const progress = progressById[item.id];
+                let progressFraction: number | undefined;
+                if (
+                  progress &&
+                  progress.positionSeconds !== null &&
+                  progress.durationSeconds !== null &&
+                  progress.durationSeconds > 0
+                ) {
+                  progressFraction = Math.min(
+                    1,
+                    progress.positionSeconds / progress.durationSeconds
+                  );
+                }
+                return { ...item, progressFraction };
+              });
             }
           }
         }
@@ -176,6 +205,14 @@ export default function DashboardPage() {
                 <div className="p-3">
                   <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
                   <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
+                  {typeof item.progressFraction === "number" ? (
+                    <div className="mt-2 h-1 w-full rounded bg-gray-800">
+                      <div
+                        className="h-1 rounded bg-red-500"
+                        style={{ width: `${Math.round(item.progressFraction * 100)}%` }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </a>
             ))}
