@@ -71,78 +71,94 @@ export function AnalyticsVideoPlayer(props: Props) {
   }, [props.contentId]);
 
   return (
-    <video
-      ref={videoRef}
-      className="h-full w-full object-contain"
-      controls
-      src={`https://stream.mux.com/${props.muxPlaybackId}.m3u8`}
-      onLoadedMetadata={(event) => {
-        const position = resumePositionRef.current;
-        const element = event.currentTarget;
-        if (position && element.duration && position < element.duration) {
-          element.currentTime = position;
-        }
-      }}
-      onPlay={async () => {
-        try {
-          const userId = await getUserIdForAnalytics();
-          await fetch(`${apiBaseUrl}/api/analytics/events`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              userId: userId || undefined,
-              kind: "play",
-              contentId: props.contentId
-            })
-          });
-        } catch {
-        }
-      }}
-      onPause={async (event) => {
-        try {
-          const userId = await getUserIdForAnalytics();
+    <div className="flex flex-col gap-2">
+      <video
+        ref={videoRef}
+        className="h-full w-full object-contain"
+        controls
+        src={`https://stream.mux.com/${props.muxPlaybackId}.m3u8`}
+        onLoadedMetadata={(event) => {
+          const position = resumePositionRef.current;
           const element = event.currentTarget;
-          await fetch(`${apiBaseUrl}/api/analytics/events`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              userId: userId || undefined,
-              kind: "pause",
-              contentId: props.contentId,
-              positionSeconds: Math.floor(element.currentTime),
-              durationSeconds: Number.isFinite(element.duration) ? Math.floor(element.duration) : undefined
-            })
-          });
-        } catch {
-        }
-      }}
-      onEnded={async (event) => {
-        try {
-          const userId = await getUserIdForAnalytics();
-          const element = event.currentTarget;
-          await fetch(`${apiBaseUrl}/api/analytics/events`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              userId: userId || undefined,
-              kind: "complete",
-              contentId: props.contentId,
-              positionSeconds: Math.floor(element.currentTime),
-              durationSeconds: Number.isFinite(element.duration) ? Math.floor(element.duration) : undefined
-            })
-          });
-        } catch {
-        }
-      }}
-    >
-      Your browser does not support Mux playback.
-    </video>
+          if (position && element.duration && position < element.duration) {
+            element.currentTime = position;
+          }
+        }}
+        onPlay={async () => {
+          try {
+            const userId = await getUserIdForAnalytics();
+            await fetch(`${apiBaseUrl}/api/analytics/events`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                userId: userId || undefined,
+                kind: "play",
+                contentId: props.contentId
+              })
+            });
+          } catch {
+          }
+        }}
+        onPause={async (event) => {
+          try {
+            const userId = await getUserIdForAnalytics();
+            const element = event.currentTarget;
+            await fetch(`${apiBaseUrl}/api/analytics/events`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                userId: userId || undefined,
+                kind: "pause",
+                contentId: props.contentId,
+                positionSeconds: Math.floor(element.currentTime),
+                durationSeconds: Number.isFinite(element.duration) ? Math.floor(element.duration) : undefined
+              })
+            });
+          } catch {
+          }
+        }}
+        onEnded={async (event) => {
+          try {
+            const userId = await getUserIdForAnalytics();
+            const element = event.currentTarget;
+            await fetch(`${apiBaseUrl}/api/analytics/events`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                userId: userId || undefined,
+                kind: "complete",
+                contentId: props.contentId,
+                positionSeconds: Math.floor(element.currentTime),
+                durationSeconds: Number.isFinite(element.duration) ? Math.floor(element.duration) : undefined
+              })
+            });
+          } catch {
+          }
+        }}
+      >
+        Your browser does not support Mux playback.
+      </video>
+      <button
+        className="self-start rounded-md border border-gray-700 px-3 py-1 text-xs font-medium hover:border-gray-500"
+        type="button"
+        onClick={() => {
+          const element = videoRef.current;
+          if (!element) {
+            return;
+          }
+          element.currentTime = 0;
+          element.play().catch(() => {});
+        }}
+      >
+        Restart from beginning
+      </button>
+    </div>
   );
 }
 

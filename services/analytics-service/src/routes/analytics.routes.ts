@@ -142,4 +142,51 @@ router.get("/continue-watching", async (request, response) => {
   });
 });
 
+router.get("/history", async (request, response) => {
+  const userId = String(request.query.userId ?? "");
+  if (!userId) {
+    response.json({ data: [] });
+    return;
+  }
+
+  const results = await EventModel.aggregate([
+    {
+      $match: {
+        userId,
+        contentId: { $exists: true, $ne: null },
+        kind: { $in: ["play", "pause", "complete"] }
+      }
+    },
+    {
+      $sort: { createdAt: -1 }
+    },
+    {
+      $group: {
+        _id: "$contentId",
+        lastEvent: { $first: "$$ROOT" }
+      }
+    },
+    {
+      $match: {
+        "lastEvent.kind": "complete"
+      }
+    },
+    {
+      $sort: {
+        "lastEvent.createdAt": -1
+      }
+    },
+    {
+      $limit: 20
+    }
+  ]);
+
+  response.json({
+    data: results.map((entry) => ({
+      contentId: (entry.lastEvent.contentId ?? "") as string,
+      completedAt: entry.lastEvent.createdAt as Date
+    }))
+  });
+});
+
 export const analyticsRoutes = router;

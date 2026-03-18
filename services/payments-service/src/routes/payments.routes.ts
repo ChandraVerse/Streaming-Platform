@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import { Router } from "express";
 import Razorpay from "razorpay";
 import Stripe from "stripe";
@@ -125,5 +126,99 @@ router.post("/upi/intent", (request, response) => {
   });
 });
 
-export const paymentsRoutes = router;
+router.post("/stripe/webhook", async (request: Request, response: Response) => {
+  if (!stripeClient || !env.STRIPE_WEBHOOK_SECRET) {
+    response.status(503).json({ message: "Stripe webhook not configured" });
+    return;
+  }
 
+  const sig = request.headers["stripe-signature"];
+  if (!sig) {
+    response.status(400).json({ message: "Missing Stripe signature" });
+    return;
+  }
+
+  let event: Stripe.Event;
+  try {
+    const payloadString = JSON.stringify(request.body);
+    event = stripeClient.webhooks.constructEvent(payloadString, sig as string, env.STRIPE_WEBHOOK_SECRET);
+  } catch (error) {
+    response.status(400).json({ message: "Invalid Stripe signature" });
+    return;
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const metadata = session.metadata ?? {};
+    const userId = metadata.userId;
+    const planId = metadata.planId as "mobile" | "standard" | "premium" | undefined;
+    if (userId && planId) {
+      await activateSubscriptionFromPayments(userId, planId);
+    }
+  }
+
+  response.json({ received: true });
+});
+
+router.post("/razorpay/webhook", async (request: Request, response: Response) => {
+  if (!razorpayClient || !env.RAZORPAY_WEBHOOK_SECRET) {
+    response.status(503).json({ message: "Razorpay webhook not configured" });
+    return;
+  }
+
+  const signature = request.headers["x-razorpay-signature"];
+  if (!signature) {
+    response.status(400).json({ message: "Missing Razorpay signature" });
+    return;
+  }
+
+  const bodyString = JSON.stringify(request.body);
+  const expectedSignature = Razorpay.validateWebhookSignature(
+    bodyString,
+    signature as string,
+    env.RAZORPAY_WEBHOOK_SECRET
+  );
+  if (!expectedSignature) {
+    response.status(400).json({ message: "Invalid Razorpay signature" });
+    return;
+  }
+
+  const event = request.body as {
+    event: string;
+    payload?: {
+      payment?: { entity?: { notes?: { userId?: string; planId?: string } } };
+      order?: { entity?: { notes?: { userId?: string; planId?: string } } };
+    };
+  };
+
+  if (event.event === "payment.captured" || event.event === "order.paid") {
+    const notes =
+      event.payload?.payment?.entity?.notes ??
+      event.payload?.order?.entity?.notes ??
+      {};
+    const userId = notes.userId;
+    const planId = notes.planId as "mobile" | "standard" | "premium" | undefined;
+    if (userId && planId) {
+      await activateSubscriptionFromPayments(userId, planId);
+    }
+  }
+
+  response.json({ received: true });
+});
+
+async function activateSubscriptionFromPayments(
+  userId: string,
+  planId: "mobile" | "standard" | "premium"
+) {
+  const url = `${env.AUTH_SERVICE_URL}/subscriptions/activate-from-payments`;
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-payments-secret": env.PAYMENTS_WEBHOOK_SECRET ?? ""
+    },
+    body: JSON.stringify({ userId, planId })
+  });
+}
+
+export const paymentsRoutes = router;
