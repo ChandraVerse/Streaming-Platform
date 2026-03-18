@@ -12,7 +12,6 @@ export default function DashboardPage() {
   const [following, setFollowing] = useState<{ userId: string; fullName: string; email: string }[]>([]);
   const [referrals, setReferrals] = useState<{ total: number; referees: { userId: string; fullName: string; email: string }[] } | null>(null);
   const [continueWatching, setContinueWatching] = useState<(CatalogItem & { progressFraction?: number })[]>([]);
-  const [history, setHistory] = useState<CatalogItem[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -48,7 +47,6 @@ export default function DashboardPage() {
       const followingPayload = followingRes.ok ? await followingRes.json() : { data: [] };
       const referralsPayload = referralsRes.ok ? await referralsRes.json() : { data: null };
       let continueWatchingItems: (CatalogItem & { progressFraction?: number })[] = [];
-      let historyItems: CatalogItem[] = [];
       try {
         const userId = mePayload.data.userId as string;
         const analyticsRes = await fetch(
@@ -98,28 +96,6 @@ export default function DashboardPage() {
             }
           }
         }
-
-        const historyRes = await fetch(
-          `${apiBaseUrl}/api/analytics/history?userId=${encodeURIComponent(userId)}`
-        );
-        if (historyRes.ok) {
-          const historyPayload = await historyRes.json();
-          const historyIds: string[] = (historyPayload.data as { contentId: string }[]).map(
-            (entry) => entry.contentId
-          );
-          const filteredIds = historyIds.filter(
-            (id) => !continueWatchingItems.some((item) => item.id === id)
-          );
-          if (filteredIds.length > 0) {
-            const historyBulkRes = await fetch(
-              `${apiBaseUrl}/api/content/bulk?ids=${encodeURIComponent(filteredIds.join(","))}`
-            );
-            if (historyBulkRes.ok) {
-              const historyBulkPayload = await historyBulkRes.json();
-              historyItems = historyBulkPayload.data as CatalogItem[];
-            }
-          }
-        }
       } catch {
       }
       setSession(mePayload.data);
@@ -127,7 +103,6 @@ export default function DashboardPage() {
       setFollowing(followingPayload.data);
       setReferrals(referralsPayload.data);
       setContinueWatching(continueWatchingItems);
-      setHistory(historyItems);
       setStatus("Ready");
     }
     loadData().catch(() => setStatus("Unable to load dashboard"));
@@ -141,23 +116,6 @@ export default function DashboardPage() {
         <section className="rounded-xl border border-gray-800 p-5">
           <h2 className="text-xl font-semibold">{session.fullName}</h2>
           <p className="mt-1 text-gray-300">{session.email}</p>
-          <div className="mt-2 text-xs text-gray-300">
-            {session.subscription ? (
-              <>
-                <span className="font-semibold">Subscription:</span>{" "}
-                <span className="uppercase">
-                  {session.subscription.planId} ({session.subscription.status})
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold text-red-300">No active subscription.</span>{" "}
-                <a className="text-red-400 underline" href="/subscribe">
-                  Subscribe now
-                </a>
-              </>
-            )}
-          </div>
           {session.referralCode ? (
             <div className="mt-2 space-y-1 text-xs text-gray-400">
               <p>
@@ -247,13 +205,6 @@ export default function DashboardPage() {
                 <div className="p-3">
                   <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
                   <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
-                  {item.isPremium ? (
-                    <span className="mt-1 inline-block rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-300">
-                      {session.subscription && session.subscription.status === "active"
-                        ? "Premium"
-                        : "Premium • Locked"}
-                    </span>
-                  ) : null}
                   {typeof item.progressFraction === "number" ? (
                     <div className="mt-2 h-1 w-full rounded bg-gray-800">
                       <div
@@ -261,44 +212,6 @@ export default function DashboardPage() {
                         style={{ width: `${Math.round(item.progressFraction * 100)}%` }}
                       />
                     </div>
-                  ) : null}
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-      ) : null}
-      {session && history.length > 0 ? (
-        <section className="rounded-xl border border-gray-800 p-5">
-          <h2 className="text-xl font-semibold">Watch History</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-4">
-            {history.map((item) => (
-              <a
-                className="group overflow-hidden rounded-md border border-gray-800 bg-gray-900"
-                href={`/title/${item.id}`}
-                key={item.id}
-              >
-                <div className="aspect-[2/3] bg-gray-800">
-                  {item.posterImageUrl ? (
-                    <img
-                      alt={item.title}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                      src={item.posterImageUrl}
-                    />
-                  ) : null}
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-1 text-sm font-semibold">{item.title}</p>
-                  <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
-                  <span className="mt-2 inline-block rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-50">
-                    Completed
-                  </span>
-                  {item.isPremium ? (
-                    <span className="mt-1 inline-block rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-300">
-                      {session.subscription && session.subscription.status === "active"
-                        ? "Premium"
-                        : "Premium • Locked"}
-                    </span>
                   ) : null}
                 </div>
               </a>
