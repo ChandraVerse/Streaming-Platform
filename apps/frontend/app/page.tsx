@@ -1,30 +1,12 @@
 import Link from "next/link";
+import { CinematicBg } from "@/components/cinematic-bg";
 
 export const revalidate = 60;
 
 export default function HomePage() {
   return (
     <>
-      {/* ── Cinematic Background ── */}
-      <div className="cin-bg" aria-hidden="true">
-        <div className="cin-bg__stars" />
-        <div className="cin-bg__orb cin-bg__orb--red" />
-        <div className="cin-bg__orb cin-bg__orb--blue" />
-        <div className="cin-bg__orb cin-bg__orb--purple" />
-        <div className="cin-bg__orb cin-bg__orb--gold" />
-        <div className="cin-bg__cards">
-          <div className="cin-card cin-card--1" />
-          <div className="cin-card cin-card--2" />
-          <div className="cin-card cin-card--3" />
-          <div className="cin-card cin-card--4" />
-          <div className="cin-card cin-card--5" />
-          <div className="cin-card cin-card--6" />
-        </div>
-        <div className="cin-bg__scanline" />
-        <div className="cin-bg__noise" />
-        <div className="cin-bg__vignette" />
-        <div className="cin-bg__fade" />
-      </div>
+      <CinematicBg />
 
       {/* ── Page Content ── */}
       <main className="relative z-10 min-h-screen text-gray-50">
