@@ -105,7 +105,7 @@ export default function SignInPage() {
 
   return (
     <>
-      <CinematicBg />
+      <CinematicBg theme="signin" />
 
       <main className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">

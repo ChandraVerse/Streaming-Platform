@@ -123,6 +123,12 @@ body {
   pointer-events: none;
 }
 
+/* ── Base gradient layer ────────────────────────────── */
+.cin-bg__base {
+  position: absolute;
+  inset: 0;
+}
+
 /* Floating movie poster cards */
 .cin-bg__cards {
   position: absolute;
@@ -132,58 +138,10 @@ body {
 
 .cin-card {
   position: absolute;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
   overflow: hidden;
-}
-
-.cin-card--1 {
-  width: 80px; height: 112px;
-  top: 12%; left: 5%;
-  background: linear-gradient(160deg, #991b1b 0%, #450a0a 50%, #0f0f0f 100%);
-  animation: float-card 9s ease-in-out infinite;
-  opacity: 0.5;
-}
-
-.cin-card--2 {
-  width: 70px; height: 98px;
-  top: 55%; left: 3%;
-  background: linear-gradient(160deg, #1e40af 0%, #0c1a4f 50%, #0f0f0f 100%);
-  animation: float-card 11s ease-in-out infinite reverse;
-  opacity: 0.45;
-}
-
-.cin-card--3 {
-  width: 90px; height: 126px;
-  top: 8%; right: 6%;
-  background: linear-gradient(160deg, #065f46 0%, #022c22 50%, #0f0f0f 100%);
-  animation: float-card 13s ease-in-out infinite;
-  opacity: 0.5;
-}
-
-.cin-card--4 {
-  width: 65px; height: 91px;
-  top: 60%; right: 4%;
-  background: linear-gradient(160deg, #6b21a8 0%, #3b0764 50%, #0f0f0f 100%);
-  animation: float-card 10s ease-in-out infinite reverse;
-  opacity: 0.4;
-}
-
-.cin-card--5 {
-  width: 75px; height: 105px;
-  top: 30%; left: 1%;
-  background: linear-gradient(160deg, #92400e 0%, #451a03 50%, #0f0f0f 100%);
-  animation: float-card 14s ease-in-out infinite;
-  opacity: 0.35;
-}
-
-.cin-card--6 {
-  width: 72px; height: 100px;
-  top: 25%; right: 2%;
-  background: linear-gradient(160deg, #0e7490 0%, #082f49 50%, #0f0f0f 100%);
-  animation: float-card 12s ease-in-out infinite reverse;
-  opacity: 0.4;
 }
 
 /* Shimmer on each card */
@@ -191,14 +149,116 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%, rgba(255,255,255,0.04) 100%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.04) 100%);
+  pointer-events: none;
 }
 
 @keyframes float-card {
-  0%   { transform: translateY(0px) rotate(-1deg); }
-  33%  { transform: translateY(-18px) rotate(0.5deg); }
-  66%  { transform: translateY(-8px) rotate(-0.5deg); }
-  100% { transform: translateY(0px) rotate(-1deg); }
+  0%   { transform: translateY(0px) rotate(-1.5deg); }
+  33%  { transform: translateY(-16px) rotate(0.5deg); }
+  66%  { transform: translateY(-7px) rotate(-0.5deg); }
+  100% { transform: translateY(0px) rotate(-1.5deg); }
+}
+
+/* ═══════════════════════════════════════════════════
+   Geometric Shape System
+═══════════════════════════════════════════════════ */
+
+.cin-bg__geo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Base geo element */
+.geo {
+  position: absolute;
+  opacity: 0;
+  animation: geo-appear 1s ease forwards;
+}
+
+/* Hexagon */
+.geo-hex {
+  clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  border: 1.5px solid rgba(229,9,20,0.25);
+  background: rgba(229,9,20,0.04);
+  animation: geo-appear 1s ease forwards, geo-rotate 30s linear infinite;
+}
+.geo-hex-2 {
+  clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  border: 1px solid rgba(124,58,237,0.3);
+  background: rgba(124,58,237,0.05);
+  animation: geo-appear 1.2s ease forwards, geo-rotate-rev 25s linear infinite;
+}
+
+/* Triangle outline */
+.geo-tri-outline {
+  clip-path: polygon(50% 0%,100% 100%,0% 100%);
+  border: 1.5px solid rgba(29,78,216,0.3);
+  background: rgba(29,78,216,0.04);
+  animation: geo-appear 1s ease forwards, float-gentle 10s ease-in-out infinite reverse;
+}
+
+/* Ring / circle */
+.geo-ring {
+  border-radius: 50%;
+  border: 1.5px solid rgba(245,158,11,0.25);
+  background: transparent;
+  animation: geo-appear 1.3s ease forwards, pulse-ring 6s ease-in-out infinite;
+}
+.geo-ring-2 {
+  border-radius: 50%;
+  border: 1px solid rgba(229,9,20,0.2);
+  background: transparent;
+  animation: geo-appear 1.5s ease forwards, pulse-ring 8s ease-in-out infinite reverse;
+}
+
+/* Diamond (rotated square) */
+.geo-diamond {
+  transform: rotate(45deg);
+  border: 1.5px solid rgba(124,58,237,0.28);
+  background: rgba(124,58,237,0.04);
+  animation: geo-appear 1.1s ease forwards, geo-rotate 20s linear infinite;
+}
+
+/* Dotted grid patch */
+.geo-dots {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+  animation: geo-appear 2s ease forwards;
+}
+
+/* Line segment */
+.geo-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(229,9,20,0.4), transparent);
+  animation: geo-appear 1.5s ease forwards, line-sweep 6s ease-in-out infinite;
+}
+
+/* ── Geo keyframes ─────────────────────────────────── */
+@keyframes geo-appear {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes geo-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes geo-rotate-rev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1);    opacity: 0.5; }
+  50%      { transform: scale(1.08); opacity: 0.9; }
+}
+@keyframes line-sweep {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.8; }
 }
 
 /* Horizontal scan line */
