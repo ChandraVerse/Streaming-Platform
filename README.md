@@ -365,11 +365,22 @@ npm run cypress:open # or: npm test
 
 ## 🚦 Status & Gaps
 
-This is a near end-to-end OTT skeleton, but still intentionally incomplete in some production aspects:
+### ✅ Completed
 
-- No full ad-insertion pipeline (only subscription monetization is wired).
-- Limited admin UI (no bulk upload, CSV, etc.).
-- Security is basic (helmet, rate limits, JWT) but missing device fingerprinting, etc.
-- Tests focus on health endpoints and a key happy-path E2E flow; more coverage is possible.
+- Multi-service architecture wired with API gateway and Docker Compose.
+- Frontend routes for core journeys: browse, search, trending, title detail, live, dashboard, signup/signin, subscribe, and admin pages.
+- Auth, content, analytics, payments, and social service scaffolding with Express + TypeScript.
+- Feature flags and experiments for dashboard rows.
+- Analytics-driven rows (trending, continue watching, top 10, friends).
+- Ratings & review flow with backend + frontend integration.
+- Landing page styled with an OTT-inspired hero and CTA layout.
+- Baseline test coverage (health checks + a Cypress happy-path flow).
 
-Still, it’s a solid sandbox for experimenting with an OTT-style architecture and flows. 🎉
+### 🧭 Remaining / Roadmap
+
+- Full ad-insertion and ad decisioning pipeline.
+- Production-grade auth hardening (device fingerprinting, advanced abuse controls).
+- Admin tooling for bulk content upload, CSV import, and editorial workflows.
+- Expanded test coverage across services, UI, and critical workflows.
+- Observability stack (structured logs, traces, metrics dashboards, alerting).
+- Content delivery optimizations (image CDN, adaptive artwork, caching strategy).
