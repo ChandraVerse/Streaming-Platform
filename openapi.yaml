@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: Unified OTT API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000/api
+paths:
+  /auth/register:
+    post:
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Created
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: OK
+  /users/me:
+    get:
+      summary: Current user
+      responses:
+        "200":
+          description: OK
+  /subscriptions/plans:
+    get:
+      summary: List subscription plans
+      responses:
+        "200":
+          description: OK
+  /content:
+    get:
+      summary: List catalog content
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create content
+      responses:
+        "201":
+          description: Created
+  /content/{id}:
+    get:
+      summary: Get content details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /content/{id}/recommendations:
+    get:
+      summary: Related recommendations
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /live/channels:
+    get:
+      summary: List live channels
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create live channel
+      responses:
+        "201":
+          description: Created
+  /downloads/request:
+    post:
+      summary: Request offline download license
+      responses:
+        "201":
+          description: Created
+  /analytics/events:
+    post:
+      summary: Ingest analytics event
+      responses:
+        "201":
+          description: Created
+  /analytics/recommendations/personalized:
+    get:
+      summary: Personalized recommendations
+      responses:
+        "200":
+          description: OK

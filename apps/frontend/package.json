@@ -8,8 +8,8 @@
     "start": "next start -p 3000",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "cypress run",
-    "test:e2e": "cypress run",
+    "test": "node scripts/run-cypress.js",
+    "test:e2e": "CYPRESS_RUN=true node scripts/run-cypress.js",
     "cypress:open": "cypress open"
   },
   "dependencies": {

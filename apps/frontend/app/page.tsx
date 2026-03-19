@@ -61,6 +61,24 @@ export default function HomePage() {
         >
           Live TV
         </Link>
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/social" }}
+        >
+          Social
+        </Link>
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/downloads" }}
+        >
+          Downloads
+        </Link>
+        <Link
+          className="rounded-md border border-gray-700 px-4 py-2 font-medium hover:border-gray-500"
+          href={{ pathname: "/rentals" }}
+        >
+          Rentals
+        </Link>
       </section>
     </main>
   );

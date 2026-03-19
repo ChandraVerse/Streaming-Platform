@@ -15,10 +15,61 @@ async function fetchSummary() {
   };
 }
 
+async function fetchCohorts() {
+  const response = await fetch(`${apiBaseUrl}/api/analytics/cohorts`, {
+    next: { revalidate: 60 }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const payload = await response.json();
+  return payload.data as { cohort: string; signups: number }[];
+}
+
+async function fetchContentPerformance() {
+  const response = await fetch(`${apiBaseUrl}/api/analytics/content-performance`, {
+    next: { revalidate: 60 }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const payload = await response.json();
+  return payload.data as { contentId: string; plays: number; completes: number; completionRate: number }[];
+}
+
+async function fetchExperiments() {
+  const response = await fetch(`${apiBaseUrl}/api/analytics/experiments`, {
+    next: { revalidate: 60 }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const payload = await response.json();
+  return payload.data as { name: string }[];
+}
+
+async function fetchExperimentResults(name: string) {
+  const response = await fetch(`${apiBaseUrl}/api/analytics/experiments/results?name=${encodeURIComponent(name)}`, {
+    next: { revalidate: 60 }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const payload = await response.json();
+  return payload.data as { variant: string; count: number }[];
+}
+
 export const revalidate = 30;
 
 export default async function AnalyticsPage() {
   const summary = await fetchSummary();
+  const [cohorts, performance, experiments] = await Promise.all([
+    fetchCohorts(),
+    fetchContentPerformance(),
+    fetchExperiments()
+  ]);
+  const experimentResults =
+    experiments.length > 0 ? await fetchExperimentResults(experiments[0].name) : [];
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10">
@@ -38,7 +89,48 @@ export default async function AnalyticsPage() {
       ) : (
         <p className="text-sm text-gray-300">Unable to load analytics.</p>
       )}
+      <section className="rounded-xl border border-gray-800 p-4">
+        <h2 className="text-lg font-semibold">Cohort signups</h2>
+        {cohorts.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-400">No cohort data.</p>
+        ) : (
+          <ul className="mt-2 space-y-1 text-sm text-gray-300">
+            {cohorts.map((entry) => (
+              <li key={entry.cohort}>
+                {entry.cohort}: {entry.signups}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="rounded-xl border border-gray-800 p-4">
+        <h2 className="text-lg font-semibold">Content performance</h2>
+        {performance.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-400">No performance data.</p>
+        ) : (
+          <ul className="mt-2 space-y-1 text-sm text-gray-300">
+            {performance.map((entry) => (
+              <li key={entry.contentId}>
+                {entry.contentId}: {Math.round(entry.completionRate * 100)}% completion
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="rounded-xl border border-gray-800 p-4">
+        <h2 className="text-lg font-semibold">Experiment results</h2>
+        {experimentResults.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-400">No experiment results.</p>
+        ) : (
+          <ul className="mt-2 space-y-1 text-sm text-gray-300">
+            {experimentResults.map((entry) => (
+              <li key={entry.variant}>
+                {entry.variant}: {entry.count}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
-

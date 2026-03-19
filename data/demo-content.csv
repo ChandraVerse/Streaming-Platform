@@ -1,0 +1,4 @@
+title,slug,kind,description,genres,languages,isPremium,isKids,isLive,liveStartTime,posterImageUrl,bannerImageUrl
+City Derby Live,city-derby-live,live,Live football derby,Sports|Live,en,true,false,true,2026-03-19T18:00:00Z,,
+Cooking Hour,cooking-hour,series,Weekly cooking show,Lifestyle|Food,en,false,false,false,,,
+Kids Explorer,kids-explorer,series,Fun learning adventures,Kids|Education,en,false,true,false,,,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ContentModel } from "../models/content.model.js";
 import { RatingModel } from "../models/rating.model.js";
 import { indexContent } from "../search/indexer.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
@@ -23,6 +24,9 @@ const contentSchema = z.object({
   trailerAssetId: z.string().optional(),
   mainAssetId: z.string().optional(),
   muxPlaybackId: z.string().optional(),
+  liveStreamId: z.string().optional(),
+  livePlaybackId: z.string().optional(),
+  liveBackupPlaybackId: z.string().optional(),
   isPremium: z.boolean().default(true),
   isKids: z.boolean().default(false),
   isLive: z.boolean().default(false),
@@ -97,7 +101,8 @@ router.get("/", async (request, response) => {
       genres: content.genres,
       isPremium: content.isPremium,
       isLive: content.isLive,
-      liveStartTime: content.liveStartTime
+      liveStartTime: content.liveStartTime,
+      livePlaybackId: content.livePlaybackId ?? content.muxPlaybackId ?? undefined
     })),
     page: pageNumber,
     pageSize: size,
@@ -144,6 +149,9 @@ router.put("/:id", async (request, response) => {
   if (fields.trailerAssetId !== undefined) content.trailerAssetId = fields.trailerAssetId;
   if (fields.mainAssetId !== undefined) content.mainAssetId = fields.mainAssetId;
   if (fields.muxPlaybackId !== undefined) content.muxPlaybackId = fields.muxPlaybackId;
+  if (fields.liveStreamId !== undefined) content.liveStreamId = fields.liveStreamId;
+  if (fields.livePlaybackId !== undefined) content.livePlaybackId = fields.livePlaybackId;
+  if (fields.liveBackupPlaybackId !== undefined) content.liveBackupPlaybackId = fields.liveBackupPlaybackId;
   if (fields.isPremium !== undefined) content.isPremium = fields.isPremium;
   if (fields.isKids !== undefined) content.isKids = fields.isKids;
   if (fields.isLive !== undefined) content.isLive = fields.isLive;
@@ -184,6 +192,9 @@ router.get("/:id", async (request, response) => {
       posterImageUrl: content.posterImageUrl,
       bannerImageUrl: content.bannerImageUrl,
       muxPlaybackId: content.muxPlaybackId,
+      liveStreamId: content.liveStreamId,
+      livePlaybackId: content.livePlaybackId,
+      liveBackupPlaybackId: content.liveBackupPlaybackId,
       isPremium: content.isPremium,
       isKids: content.isKids,
       isLive: content.isLive,
@@ -199,13 +210,31 @@ router.get("/:id/recommendations", async (request, response) => {
     return;
   }
 
-  const candidates = await ContentModel.find({
+  let candidates = await ContentModel.find({
     _id: { $ne: current.id },
     genres: { $in: current.genres },
     isKids: current.isKids
   })
     .sort({ createdAt: -1 })
     .limit(50);
+  try {
+    const recResponse = await fetch(
+      `${env.ANALYTICS_SERVICE_URL}/analytics/recommendations/related?contentId=${encodeURIComponent(
+        current.id
+      )}&limit=20`
+    );
+    if (recResponse.ok) {
+      const payload = (await recResponse.json()) as { data: { contentId: string }[] };
+      const ids = payload.data.map((entry) => entry.contentId);
+      if (ids.length > 0) {
+        const related = await ContentModel.find({ _id: { $in: ids }, isKids: current.isKids });
+        if (related.length > 0) {
+          candidates = related;
+        }
+      }
+    }
+  } catch {
+  }
 
   const ids = candidates.map((content) => content.id);
   const ratingStats = await RatingModel.aggregate([
@@ -268,6 +297,140 @@ router.get("/:id/recommendations", async (request, response) => {
   });
 });
 
+router.get("/top-ten", async (request, response) => {
+  const kidsParam = request.query.kids;
+  const language = request.query.language;
+  const windowHours = Number(request.query.windowHours ?? 720) || 720;
+  const limit = Number(request.query.limit ?? 10) || 10;
+  const kids = kidsParam === "true" ? true : kidsParam === "false" ? false : undefined;
+  try {
+    const trendingRes = await fetch(
+      `${env.ANALYTICS_SERVICE_URL}/analytics/trending?windowHours=${encodeURIComponent(String(windowHours))}`
+    );
+    if (!trendingRes.ok) {
+      response.json({ data: [] });
+      return;
+    }
+    const trendingPayload = (await trendingRes.json()) as { data: { contentId: string }[] };
+    const ids = trendingPayload.data.map((entry) => entry.contentId);
+    if (ids.length === 0) {
+      response.json({ data: [] });
+      return;
+    }
+    const query: Record<string, unknown> = { _id: { $in: ids } };
+    if (kids !== undefined) {
+      query.isKids = kids;
+    }
+    if (language) {
+      query.languages = language;
+    }
+    const items = await ContentModel.find(query).limit(limit);
+    response.json({
+      data: items.map((content) => ({
+        id: content.id,
+        title: content.title,
+        slug: content.slug,
+        posterImageUrl: content.posterImageUrl,
+        kind: content.kind,
+        genres: content.genres,
+        isPremium: content.isPremium,
+        isLive: content.isLive,
+        liveStartTime: content.liveStartTime
+      }))
+    });
+  } catch {
+    response.json({ data: [] });
+  }
+});
+
+const bulkImportSchema = z.object({
+  csv: z.string().min(1)
+});
+
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+router.post("/bulk-import", async (request, response) => {
+  const parsed = bulkImportSchema.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+    return;
+  }
+  const lines = parsed.data.csv.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  if (lines.length < 2) {
+    response.status(400).json({ message: "CSV must include header and at least one row" });
+    return;
+  }
+  const headers = lines[0].split(",").map((value) => value.trim());
+  const created: { id: string; title: string }[] = [];
+  for (const line of lines.slice(1)) {
+    const values = line.split(",").map((value) => value.trim());
+    const entry: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      entry[header] = values[index] ?? "";
+    });
+    if (!entry.title || !entry.description) {
+      continue;
+    }
+    const slug = entry.slug?.length ? entry.slug : toSlug(entry.title);
+    const existing = await ContentModel.findOne({ slug });
+    if (existing) {
+      continue;
+    }
+    const content = await ContentModel.create({
+      title: entry.title,
+      slug,
+      kind: (entry.kind as "movie" | "series" | "live") || "movie",
+      description: entry.description,
+      genres: entry.genres ? entry.genres.split("|").map((value) => value.trim()) : [],
+      languages: entry.languages ? entry.languages.split("|").map((value) => value.trim()) : [],
+      isPremium: entry.isPremium ? entry.isPremium === "true" : true,
+      isKids: entry.isKids ? entry.isKids === "true" : false,
+      isLive: entry.isLive ? entry.isLive === "true" : false,
+      liveStartTime: entry.liveStartTime ? new Date(entry.liveStartTime) : undefined,
+      posterImageUrl: entry.posterImageUrl || undefined,
+      bannerImageUrl: entry.bannerImageUrl || undefined
+    });
+    await indexContent(content);
+    created.push({ id: content.id, title: content.title });
+  }
+  response.status(201).json({ message: "Bulk import complete", data: created });
+});
+
+const bulkUpdateSchema = z.object({
+  ids: z.array(z.string().min(1)),
+  fields: z
+    .object({
+      isPremium: z.boolean().optional(),
+      isKids: z.boolean().optional(),
+      isLive: z.boolean().optional(),
+      genres: z.array(z.string()).optional(),
+      languages: z.array(z.string()).optional()
+    })
+    .partial()
+});
+
+router.post("/bulk-update", async (request, response) => {
+  const parsed = bulkUpdateSchema.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+    return;
+  }
+  const updates = parsed.data.fields;
+  const result = await ContentModel.updateMany({ _id: { $in: parsed.data.ids } }, { $set: updates });
+  response.json({
+    message: "Bulk update complete",
+    data: {
+      matched: result.matchedCount,
+      modified: result.modifiedCount
+    }
+  });
+});
+
 router.get("/bulk", async (request, response) => {
   const idsParam = request.query.ids;
   if (!idsParam) {
@@ -296,7 +459,8 @@ router.get("/bulk", async (request, response) => {
       genres: content.genres,
       isPremium: content.isPremium,
       isLive: content.isLive,
-      liveStartTime: content.liveStartTime
+      liveStartTime: content.liveStartTime,
+      livePlaybackId: content.livePlaybackId ?? content.muxPlaybackId ?? undefined
     }))
   });
 });

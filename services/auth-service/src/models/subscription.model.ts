@@ -26,6 +26,7 @@ const subscriptionSchema = new Schema<SubscriptionDocument>(
 export const SubscriptionModel = model<SubscriptionDocument>("Subscription", subscriptionSchema);
 
 export const SUBSCRIPTION_PLANS = [
+  { id: "ad-supported", name: "Ad Supported", priceInr: 99, videoQuality: "HD", maxScreens: 1 },
   { id: "mobile", name: "Mobile", priceInr: 149, videoQuality: "HD", maxScreens: 1 },
   { id: "standard", name: "Standard", priceInr: 499, videoQuality: "Full HD", maxScreens: 2 },
   { id: "premium", name: "Premium", priceInr: 799, videoQuality: "4K + HDR", maxScreens: 4 }

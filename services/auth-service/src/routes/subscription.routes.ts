@@ -5,11 +5,13 @@ import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { SubscriptionModel, SUBSCRIPTION_PLANS } from "../models/subscription.model.js";
 import { UserModel } from "../models/user.model.js";
 import { ReferralModel } from "../models/referral.model.js";
+import { AuditLogModel } from "../models/audit-log.model.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
 const subscribeSchema = z.object({
-  planId: z.enum(["mobile", "standard", "premium"]),
+  planId: z.enum(["mobile", "standard", "premium", "ad-supported"]),
   referralCode: z.string().optional()
 });
 
@@ -70,6 +72,62 @@ router.post("/activate", requireAuth, async (request: AuthenticatedRequest, resp
 
   response.json({
     message: "Subscription activated",
+    data: {
+      planId: subscription.planId,
+      status: subscription.status
+    }
+  });
+  try {
+    await fetch(`${env.ANALYTICS_SERVICE_URL}/analytics/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        kind: "subscription_activated"
+      })
+    });
+  } catch {
+  }
+  await AuditLogModel.create({
+    actorId: userId,
+    action: "subscription_activated",
+    targetId: userId,
+    metadata: { planId: subscription.planId }
+  });
+});
+
+router.post("/activate-from-payments", async (request, response) => {
+  const secret = request.headers["x-payments-secret"];
+  if (secret !== env.PAYMENTS_WEBHOOK_SECRET) {
+    response.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+  const schema = z.object({
+    userId: z.string().min(1),
+    planId: z.enum(["mobile", "standard", "premium", "ad-supported"])
+  });
+  const parsed = schema.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+    return;
+  }
+  const subscription = await SubscriptionModel.findOneAndUpdate(
+    { userId: parsed.data.userId },
+    {
+      userId: parsed.data.userId,
+      planId: parsed.data.planId,
+      status: "active",
+      startedAt: new Date()
+    },
+    { upsert: true, new: true }
+  );
+  await AuditLogModel.create({
+    actorId: undefined,
+    action: "payments_subscription_activated",
+    targetId: parsed.data.userId,
+    metadata: { planId: parsed.data.planId }
+  });
+  response.json({
     data: {
       planId: subscription.planId,
       status: subscription.status

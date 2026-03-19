@@ -1,4 +1,4 @@
-import type { CatalogItem } from "@/lib/types";
+import type { CatalogItem, Channel, ScheduleItem } from "@/lib/types";
 
 const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:4000";
 
@@ -24,6 +24,28 @@ async function fetchAllLive(): Promise<CatalogItem[]> {
   return payload.data as CatalogItem[];
 }
 
+async function fetchChannels(): Promise<Channel[]> {
+  const response = await fetch(`${apiBaseUrl}/api/live/channels`, {
+    next: { revalidate: 60 }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const payload = await response.json();
+  return payload.data as Channel[];
+}
+
+async function fetchSchedule(channelId: string): Promise<ScheduleItem[]> {
+  const response = await fetch(`${apiBaseUrl}/api/live/channels/${channelId}/schedule`, {
+    next: { revalidate: 60 }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const payload = await response.json();
+  return payload.data as ScheduleItem[];
+}
+
 export const revalidate = 30;
 
 function splitSports(items: CatalogItem[]) {
@@ -41,7 +63,13 @@ function splitSports(items: CatalogItem[]) {
 }
 
 export default async function LivePage() {
-  const [liveNow, allLive] = await Promise.all([fetchLiveNow(), fetchAllLive()]);
+  const [liveNow, allLive, channels] = await Promise.all([fetchLiveNow(), fetchAllLive(), fetchChannels()]);
+  const schedules = await Promise.all(
+    channels.map(async (channel) => ({
+      channel,
+      schedule: await fetchSchedule(channel.id)
+    }))
+  );
   const { sports, others } = splitSports(allLive);
 
   return (
@@ -79,6 +107,36 @@ export default async function LivePage() {
                   <p className="mt-1 text-xs text-gray-400">{item.genres.join(" • ")}</p>
                 </div>
               </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {schedules.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-2xl font-semibold">Channel Schedule</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {schedules.map(({ channel, schedule }) => (
+              <div className="rounded-xl border border-gray-800 bg-gray-950 p-4" key={channel.id}>
+                <div className="flex items-center gap-3">
+                  {channel.logoUrl ? (
+                    <img alt={channel.name} className="h-10 w-10 rounded-md object-cover" src={channel.logoUrl} />
+                  ) : null}
+                  <div>
+                    <p className="text-sm font-semibold">{channel.name}</p>
+                    <p className="text-xs text-gray-400">{channel.timezone}</p>
+                  </div>
+                </div>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {schedule.slice(0, 6).map((entry) => (
+                    <li className="flex items-center justify-between gap-2 text-xs" key={entry.id}>
+                      <span className="font-medium">{entry.title}</span>
+                      <span className="text-gray-400">
+                        {new Date(entry.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
         </section>
@@ -150,4 +208,3 @@ export default async function LivePage() {
     </main>
   );
 }
-

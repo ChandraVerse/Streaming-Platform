@@ -64,6 +64,13 @@ export default function AdminContentPage() {
   const [assetId, setAssetId] = useState("");
   const [playbackId, setPlaybackId] = useState("");
   const [assetStatus, setAssetStatus] = useState("");
+  const [csvText, setCsvText] = useState("");
+  const [bulkIds, setBulkIds] = useState("");
+  const [bulkIsPremium, setBulkIsPremium] = useState("keep");
+  const [bulkIsKids, setBulkIsKids] = useState("keep");
+  const [bulkIsLive, setBulkIsLive] = useState("keep");
+  const [bulkGenres, setBulkGenres] = useState("");
+  const [bulkLanguages, setBulkLanguages] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -246,6 +253,63 @@ export default function AdminContentPage() {
       }
     } catch {
       setAssetStatus("Unable to attach asset.");
+    }
+  }
+
+  async function handleBulkImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setStatus("");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/content/bulk-import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csv: csvText })
+      });
+      if (!response.ok) {
+        setStatus("Bulk import failed.");
+        return;
+      }
+      setCsvText("");
+      await load();
+      setStatus("Bulk import completed.");
+    } catch {
+      setStatus("Bulk import failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleBulkUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setStatus("");
+    const ids = bulkIds
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    const fields: Record<string, unknown> = {};
+    if (bulkIsPremium !== "keep") fields.isPremium = bulkIsPremium === "true";
+    if (bulkIsKids !== "keep") fields.isKids = bulkIsKids === "true";
+    if (bulkIsLive !== "keep") fields.isLive = bulkIsLive === "true";
+    if (bulkGenres.trim()) fields.genres = bulkGenres.split("|").map((value) => value.trim());
+    if (bulkLanguages.trim()) fields.languages = bulkLanguages.split("|").map((value) => value.trim());
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/content/bulk-update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, fields })
+      });
+      if (!response.ok) {
+        setStatus("Bulk update failed.");
+        return;
+      }
+      await load();
+      setStatus("Bulk update completed.");
+    } catch {
+      setStatus("Bulk update failed.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -507,6 +571,100 @@ export default function AdminContentPage() {
               </button>
             </form>
             {assetStatus ? <p className="text-xs text-gray-300">{assetStatus}</p> : null}
+          </section>
+          <section className="mt-6 space-y-3 rounded-md border border-gray-800 bg-gray-950 p-3">
+            <h3 className="text-sm font-semibold">Bulk import (CSV)</h3>
+            <form className="space-y-2" onSubmit={handleBulkImport}>
+              <textarea
+                className="h-32 w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                placeholder="title,slug,kind,description,genres,languages,isPremium,isKids,isLive,liveStartTime"
+                value={csvText}
+                onChange={(event) => setCsvText(event.target.value)}
+              />
+              <button
+                className="rounded-md bg-gray-800 px-3 py-1 text-xs font-medium hover:bg-gray-700"
+                type="submit"
+                disabled={saving}
+              >
+                Import CSV
+              </button>
+            </form>
+          </section>
+          <section className="mt-6 space-y-3 rounded-md border border-gray-800 bg-gray-950 p-3">
+            <h3 className="text-sm font-semibold">Batch edit</h3>
+            <form className="space-y-2" onSubmit={handleBulkUpdate}>
+              <label className="space-y-1 text-xs">
+                <span className="text-gray-200">Content ids (comma separated)</span>
+                <input
+                  className="w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                  value={bulkIds}
+                  onChange={(event) => setBulkIds(event.target.value)}
+                />
+              </label>
+              <div className="grid gap-2 md:grid-cols-3">
+                <label className="space-y-1 text-xs">
+                  <span className="text-gray-200">Premium</span>
+                  <select
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                    value={bulkIsPremium}
+                    onChange={(event) => setBulkIsPremium(event.target.value)}
+                  >
+                    <option value="keep">Keep</option>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-gray-200">Kids</span>
+                  <select
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                    value={bulkIsKids}
+                    onChange={(event) => setBulkIsKids(event.target.value)}
+                  >
+                    <option value="keep">Keep</option>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-gray-200">Live</span>
+                  <select
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                    value={bulkIsLive}
+                    onChange={(event) => setBulkIsLive(event.target.value)}
+                  >
+                    <option value="keep">Keep</option>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                </label>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <label className="space-y-1 text-xs">
+                  <span className="text-gray-200">Genres (pipe separated)</span>
+                  <input
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                    value={bulkGenres}
+                    onChange={(event) => setBulkGenres(event.target.value)}
+                  />
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-gray-200">Languages (pipe separated)</span>
+                  <input
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 p-2 text-xs outline-none focus:border-red-500"
+                    value={bulkLanguages}
+                    onChange={(event) => setBulkLanguages(event.target.value)}
+                  />
+                </label>
+              </div>
+              <button
+                className="rounded-md bg-gray-800 px-3 py-1 text-xs font-medium hover:bg-gray-700"
+                type="submit"
+                disabled={saving}
+              >
+                Apply updates
+              </button>
+            </form>
           </section>
         </section>
       </div>

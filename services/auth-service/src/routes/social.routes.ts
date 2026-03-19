@@ -4,6 +4,7 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
 import { FollowModel } from "../models/follow.model.js";
 import { UserModel } from "../models/user.model.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
@@ -80,6 +81,26 @@ router.get("/following", requireAuth, async (request: AuthenticatedRequest, resp
   });
 });
 
+router.post("/following/internal", async (request, response) => {
+  const secret = request.headers["x-internal-secret"];
+  if (secret !== env.INTERNAL_API_SECRET) {
+    response.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+  const schema = z.object({ userId: z.string().min(1) });
+  const parsed = schema.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+    return;
+  }
+  const follows = await FollowModel.find({ followerId: parsed.data.userId });
+  response.json({
+    data: follows.map((follow) => ({
+      userId: String(follow.followeeId)
+    }))
+  });
+});
+
 router.get("/followers", requireAuth, async (request: AuthenticatedRequest, response) => {
   const followeeId = request.auth?.userId;
   if (!followeeId) {
@@ -99,5 +120,15 @@ router.get("/followers", requireAuth, async (request: AuthenticatedRequest, resp
   });
 });
 
-export const socialRoutes = router;
+router.get("/suggestions", requireAuth, async (_request: AuthenticatedRequest, response) => {
+  const users = await UserModel.find().sort({ createdAt: -1 }).limit(10);
+  response.json({
+    data: users.map((user) => ({
+      userId: user.id,
+      fullName: user.fullName,
+      email: user.email
+    }))
+  });
+});
 
+export const socialRoutes = router;

@@ -19,6 +19,9 @@ export type ContentDocument = {
   trailerAssetId?: string;
   mainAssetId?: string;
   muxPlaybackId?: string;
+  liveStreamId?: string;
+  livePlaybackId?: string;
+  liveBackupPlaybackId?: string;
   isPremium: boolean;
   isKids: boolean;
   isLive: boolean;
@@ -45,6 +48,9 @@ const contentSchema = new Schema<ContentDocument>(
     trailerAssetId: { type: String },
     mainAssetId: { type: String },
     muxPlaybackId: { type: String },
+    liveStreamId: { type: String },
+    livePlaybackId: { type: String },
+    liveBackupPlaybackId: { type: String },
     isPremium: { type: Boolean, default: true },
     isKids: { type: Boolean, default: false },
     isLive: { type: Boolean, default: false },

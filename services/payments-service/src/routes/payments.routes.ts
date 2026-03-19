@@ -126,6 +126,27 @@ router.post("/upi/intent", (request, response) => {
   });
 });
 
+const tvodSchema = z.object({
+  userId: z.string().min(1),
+  contentId: z.string().min(1),
+  priceInr: z.number().int().positive()
+});
+
+router.post("/tvod/intent", (request, response) => {
+  const parsed = tvodSchema.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+    return;
+  }
+  response.json({
+    message: "TVOD intent generated",
+    data: {
+      reference: `tvod-${parsed.data.userId}-${parsed.data.contentId}-${Date.now()}`,
+      amount: parsed.data.priceInr
+    }
+  });
+});
+
 router.post("/stripe/webhook", async (request: Request, response: Response) => {
   if (!stripeClient || !env.STRIPE_WEBHOOK_SECRET) {
     response.status(503).json({ message: "Stripe webhook not configured" });
@@ -151,7 +172,7 @@ router.post("/stripe/webhook", async (request: Request, response: Response) => {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata ?? {};
     const userId = metadata.userId;
-    const planId = metadata.planId as "mobile" | "standard" | "premium" | undefined;
+    const planId = metadata.planId as "mobile" | "standard" | "premium" | "ad-supported" | undefined;
     if (userId && planId) {
       await activateSubscriptionFromPayments(userId, planId);
     }
@@ -197,7 +218,7 @@ router.post("/razorpay/webhook", async (request: Request, response: Response) =>
       event.payload?.order?.entity?.notes ??
       {};
     const userId = notes.userId;
-    const planId = notes.planId as "mobile" | "standard" | "premium" | undefined;
+    const planId = notes.planId as "mobile" | "standard" | "premium" | "ad-supported" | undefined;
     if (userId && planId) {
       await activateSubscriptionFromPayments(userId, planId);
     }
@@ -208,7 +229,7 @@ router.post("/razorpay/webhook", async (request: Request, response: Response) =>
 
 async function activateSubscriptionFromPayments(
   userId: string,
-  planId: "mobile" | "standard" | "premium"
+  planId: "mobile" | "standard" | "premium" | "ad-supported"
 ) {
   const url = `${env.AUTH_SERVICE_URL}/subscriptions/activate-from-payments`;
   await fetch(url, {

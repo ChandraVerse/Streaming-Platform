@@ -1,7 +1,8 @@
 import { CatalogGrid } from "@/components/catalog-grid";
 import { AnalyticsVideoPlayer } from "@/components/analytics-video-player";
 import { RatingsSection } from "@/components/ratings-section";
-import type { CatalogItem, ContentDetail } from "@/lib/types";
+import { LiveScoreboard } from "@/components/live-scoreboard";
+import type { CatalogItem, ContentDetail, LiveEvent } from "@/lib/types";
 
 type Props = {
   params: Promise<{
@@ -33,9 +34,24 @@ async function fetchRecommendations(id: string): Promise<CatalogItem[]> {
   return payload.data as CatalogItem[];
 }
 
+async function fetchLiveEvent(id: string): Promise<LiveEvent | null> {
+  const response = await fetch(`${apiBaseUrl}/api/live/events?contentId=${encodeURIComponent(id)}`, {
+    next: { revalidate: 15 }
+  });
+  if (!response.ok) {
+    return null;
+  }
+  const payload = await response.json();
+  return payload.data as LiveEvent | null;
+}
+
 export default async function TitlePage(props: Props) {
   const params = await props.params;
-  const [content, recommendations] = await Promise.all([fetchContent(params.id), fetchRecommendations(params.id)]);
+  const [content, recommendations, liveEvent] = await Promise.all([
+    fetchContent(params.id),
+    fetchRecommendations(params.id),
+    fetchLiveEvent(params.id)
+  ]);
 
   if (!content) {
     return (
@@ -55,6 +71,7 @@ export default async function TitlePage(props: Props) {
             : "Live now"}
         </p>
       ) : null}
+      {content.isLive && liveEvent ? <LiveScoreboard event={liveEvent} /> : null}
       <p className="text-sm text-gray-300">{content.description}</p>
       <div className="mt-2 flex flex-wrap gap-2 text-sm">
         <a
@@ -67,12 +84,30 @@ export default async function TitlePage(props: Props) {
         >
           Share on WhatsApp
         </a>
+        {content.isLive ? (
+          <a className="rounded-md bg-red-600 px-3 py-1 font-medium hover:bg-red-500" href="#player">
+            Go to live
+          </a>
+        ) : null}
       </div>
       {content.muxPlaybackId ? (
-        <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg bg-black">
-          <AnalyticsVideoPlayer contentId={content.id} muxPlaybackId={content.muxPlaybackId} />
+        <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg bg-black" id="player">
+          <AnalyticsVideoPlayer contentId={content.id} muxPlaybackId={content.muxPlaybackId} requiresPremium={content.isPremium} />
         </div>
       ) : null}
+      {content.livePlaybackId && !content.muxPlaybackId ? (
+        <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg bg-black" id="player">
+          <AnalyticsVideoPlayer contentId={content.id} muxPlaybackId={content.livePlaybackId} requiresPremium={content.isPremium} />
+        </div>
+      ) : null}
+      <div className="flex flex-wrap gap-2 text-sm">
+        <a className="rounded-md border border-gray-700 px-3 py-1 font-medium hover:border-gray-500" href="/rentals">
+          View rentals
+        </a>
+        <a className="rounded-md border border-gray-700 px-3 py-1 font-medium hover:border-gray-500" href="/downloads">
+          Offline downloads
+        </a>
+      </div>
       <RatingsSection contentId={content.id} />
       {recommendations.length > 0 ? (
         <section className="mt-4 space-y-3">

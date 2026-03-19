@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { RatingModel } from "../models/rating.model.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
@@ -17,12 +18,30 @@ router.post("/:contentId", async (request, response) => {
     return;
   }
 
+  const sanitizedReview = parsed.data.review
+    ? parsed.data.review.replace(/<[^>]*>/g, "").slice(0, 1000)
+    : undefined;
   const rating = await RatingModel.create({
     userId: parsed.data.userId,
     contentId: request.params.contentId,
     rating: parsed.data.rating,
-    review: parsed.data.review
+    review: sanitizedReview
   });
+  try {
+    await fetch(`${env.ANALYTICS_SERVICE_URL}/analytics/events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: parsed.data.userId,
+        contentId: request.params.contentId,
+        kind: "rating",
+        rating: parsed.data.rating
+      })
+    });
+  } catch {
+  }
 
   response.status(201).json({
     message: "Rating recorded",
@@ -46,4 +65,3 @@ router.get("/:contentId", async (request, response) => {
 });
 
 export const ratingRoutes = router;
-

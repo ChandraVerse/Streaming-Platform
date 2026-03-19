@@ -14,6 +14,10 @@ services:
       JWT_ACCESS_SECRET: access-secret-key
       JWT_REFRESH_SECRET: refresh-secret-key
       CORS_ORIGIN: http://localhost:3000
+      ANALYTICS_SERVICE_URL: http://analytics-service:4004
+      INTERNAL_API_SECRET: internal-secret-key
+      ADMIN_API_SECRET: admin-secret-key
+      PAYMENTS_WEBHOOK_SECRET: payments-secret-key
     ports:
       - "4001:4001"
     depends_on:
@@ -50,6 +54,8 @@ services:
       MONGODB_URI: mongodb://mongodb:27017/unified-ott
       CORS_ORIGIN: http://localhost:3000
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      ANALYTICS_SERVICE_URL: http://analytics-service:4004
+      DOWNLOAD_SIGNING_SECRET: download-signing-secret
     ports:
       - "4002:4002"
     depends_on:
@@ -60,6 +66,8 @@ services:
       context: ./services/payments-service
     environment:
       PORT: 4003
+      AUTH_SERVICE_URL: http://auth-service:4001
+      PAYMENTS_WEBHOOK_SECRET: payments-secret-key
       CORS_ORIGIN: http://localhost:3000
     ports:
       - "4003:4003"
@@ -72,6 +80,8 @@ services:
       PORT: 4004
       MONGODB_URI: mongodb://mongodb:27017/unified-ott
       CORS_ORIGIN: http://localhost:3000
+      AUTH_SERVICE_URL: http://auth-service:4001
+      INTERNAL_API_SECRET: internal-secret-key
     ports:
       - "4004:4004"
     depends_on:

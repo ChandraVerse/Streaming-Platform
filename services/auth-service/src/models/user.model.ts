@@ -19,8 +19,14 @@ export type UserDocument = {
   emailVerified: boolean;
   otpCode?: string;
   otpExpiresAt?: Date;
-   referralCode: string;
+  referralCode: string;
   referralCount: number;
+  activityVisibility: "public" | "private";
+  notificationPreferences?: {
+    email: boolean;
+    push: boolean;
+    inApp: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 };
@@ -48,7 +54,13 @@ const userSchema = new Schema<UserDocument>(
     otpCode: { type: String },
     otpExpiresAt: { type: Date },
     referralCode: { type: String, unique: true },
-    referralCount: { type: Number, default: 0 }
+    referralCount: { type: Number, default: 0 },
+    activityVisibility: { type: String, enum: ["public", "private"], default: "public" },
+    notificationPreferences: {
+      email: { type: Boolean, default: true },
+      push: { type: Boolean, default: false },
+      inApp: { type: Boolean, default: true }
+    }
   },
   { timestamps: true }
 );
